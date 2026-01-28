@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import type { StatusBarProps } from '../types/index.js';
 import { borders, colors } from '../utils/constants.js';
+import { useUIStore } from '../store/uiSlice.js';
 
 /**
  * StatusBar component displaying pagination info and keyboard shortcuts.
@@ -12,30 +13,37 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   totalItems,
   mode,
 }) => {
+  const checkedItems = useUIStore((s) => s.checkedItems);
+  const checkedCount = checkedItems.size;
+
   const width = 70;
   const borderLine = borders.horizontal.repeat(width - 2);
-  
+
   // Build pagination text
   const paginationText = `Page ${currentPage + 1}/${totalPages} (${totalItems} items)`;
-  
+
+  // Build selected count text
+  const selectedText = checkedCount > 0 ? ` | ${checkedCount} selected` : '';
+
   // Build shortcuts text
-  const shortcuts = mode === 'browse' 
-    ? '[n]Next [p]Prev [/]Search [?]Help'
-    : mode === 'search'
-    ? '[Esc]Cancel'
-    : mode === 'preview'
-    ? '[Esc]Close'
-    : mode === 'help'
-    ? '[Esc]Close'
-    : '[Esc]Cancel';
-  
-  // Calculate spacing
-  const paginationLength = paginationText.length;
-  const shortcutsLength = shortcuts.length;
-  const spacing = Math.max(1, width - paginationLength - shortcutsLength - 4);
-  
+  const shortcuts =
+    mode === 'browse'
+      ? '[Space]Select [d]Download [p]Preview [?]Help'
+      : mode === 'search'
+        ? '[Esc]Cancel'
+        : mode === 'preview'
+          ? '[Esc]Close'
+          : mode === 'help'
+            ? '[Esc]Close'
+            : '[Esc]Cancel';
+
   // Show mode if not browse
   const modeText = mode !== 'browse' ? `[${mode.toUpperCase()}] ` : '';
+
+  // Calculate spacing accounting for all visible text
+  const leftText = paginationText + selectedText;
+  const rightText = modeText + shortcuts;
+  const spacing = Math.max(1, width - leftText.length - rightText.length - 4);
 
   return (
     <Box flexDirection="column">
@@ -46,6 +54,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {colors.border(borders.vertical)}
         {' '}
         {paginationText}
+        {selectedText && colors.highlight(selectedText)}
         {modeText && colors.highlight(modeText)}
         {' '.repeat(spacing)}
         {shortcuts}

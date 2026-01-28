@@ -52,27 +52,71 @@ function toFileItem(f: FTPFileInfo): FileItem {
 
 export class FTPService extends EventEmitter implements IFTPService {
   private client: Client;
-  private config: FTPConfig;
+  private cfg: FTPConfig;
   private isConnected = false;
 
   constructor(config: FTPConfig) {
     super();
     this.client = new Client(config.timeout ?? defaults.ftpTimeout);
-    this.config = config;
+    this.cfg = config;
     this.client.ftp.verbose = false;
+  }
+
+  /** Expose config so download clients can reuse connection details */
+  get config(): FTPConfig {
+    return this.cfg;
+  }
+
+  /** Create a separate FTP client for download operations */
+  async createDownloadClient(): Promise<Client> {
+    const dlClient = new Client(this.cfg.timeout ?? defaults.ftpTimeout);
+    dlClient.ftp.verbose = false;
+    await dlClient.access({
+      host: this.cfg.host,
+      port: this.cfg.port ?? defaults.ftpPort,
+      user: this.cfg.user ?? defaults.ftpUser,
+      password: this.cfg.password ?? defaults.ftpPassword,
+      secure: this.cfg.secure ?? defaults.ftpSecure,
+    });
+    return dlClient;
+  }
+
+  /** Attempt to reconnect the browsing client if connection was lost */
+  private async ensureConnected(): Promise<void> {
+    if (this.isConnected) {
+      try {
+        await this.client.pwd();
+        return;
+      } catch {
+        // connection lost, try reconnect
+      }
+    }
+    try {
+      this.client.close();
+    } catch { /* ignore */ }
+    this.client = new Client(this.cfg.timeout ?? defaults.ftpTimeout);
+    this.client.ftp.verbose = false;
+    await this.client.access({
+      host: this.cfg.host,
+      port: this.cfg.port ?? defaults.ftpPort,
+      user: this.cfg.user ?? defaults.ftpUser,
+      password: this.cfg.password ?? defaults.ftpPassword,
+      secure: this.cfg.secure ?? defaults.ftpSecure,
+    });
+    this.isConnected = true;
   }
 
   async connect(): Promise<boolean> {
     try {
       await this.client.access({
-        host: this.config.host,
-        port: this.config.port ?? defaults.ftpPort,
-        user: this.config.user ?? defaults.ftpUser,
-        password: this.config.password ?? defaults.ftpPassword,
-        secure: this.config.secure ?? defaults.ftpSecure,
+        host: this.cfg.host,
+        port: this.cfg.port ?? defaults.ftpPort,
+        user: this.cfg.user ?? defaults.ftpUser,
+        password: this.cfg.password ?? defaults.ftpPassword,
+        secure: this.cfg.secure ?? defaults.ftpSecure,
       });
       this.isConnected = true;
-      this.emit('connected', { host: this.config.host, user: this.config.user });
+      this.emit('connected', { host: this.cfg.host, user: this.cfg.user });
       return true;
     } catch (err) {
       this.isConnected = false;
@@ -102,7 +146,7 @@ export class FTPService extends EventEmitter implements IFTPService {
   }
 
   async list(path: string): Promise<FileItem[]> {
-    if (!this.isConnected) throw new ConnectionError('Not connected to FTP server');
+    await this.ensureConnected();
     try {
       const raw = await this.client.list(path);
       return raw
@@ -215,7 +259,7 @@ export class FTPService extends EventEmitter implements IFTPService {
   }
 
   async getFileInfo(path: string): Promise<FileInfo> {
-    if (!this.isConnected) throw new ConnectionError('Not connected to FTP server');
+    await this.ensureConnected();
     try {
       const raw = await this.client.list(path);
       if (raw.length === 0) throw new FileNotFoundError(`${errorMessages.notFound}: ${path}`);
@@ -239,7 +283,7 @@ export class FTPService extends EventEmitter implements IFTPService {
   }
 
   async preview(path: string, maxBytes?: number): Promise<string> {
-    if (!this.isConnected) throw new ConnectionError('Not connected to FTP server');
+    await this.ensureConnected();
     const limit = maxBytes ?? defaults.maxPreviewBytes;
     const chunks: Buffer[] = [];
     let total = 0;
@@ -264,7 +308,7 @@ export class FTPService extends EventEmitter implements IFTPService {
   }
 
   async search(path: string, pattern: string, maxDepth?: number): Promise<FileItem[]> {
-    if (!this.isConnected) throw new ConnectionError('Not connected to FTP server');
+    await this.ensureConnected();
     const depthLimit = maxDepth ?? defaults.maxSearchDepth;
     const results: FileItem[] = [];
     const pat = pattern.toLowerCase();
@@ -307,4 +351,99 @@ export function createFTPService(config: FTPConfig): FTPService {
     timeout: config.timeout ?? defaults.ftpTimeout,
     passive: config.passive ?? defaults.ftpPassive,
   });
+}
+
+/**
+ * Download a file using a separate FTP client to avoid blocking browse operations.
+ * Creates a new connection, downloads, then closes.
+ */
+export async function downloadWithSeparateClient(
+  service: FTPService,
+  remotePath: string,
+  localPath: string,
+  onProgress?: FTPProgressCallback,
+): Promise<void> {
+  const dlClient = await service.createDownloadClient();
+  await ensureDirectoryExists(dirname(localPath));
+
+  let totalSize = 0;
+  try {
+    totalSize = await dlClient.size(remotePath);
+  } catch { /* size not supported */ }
+
+  const existingSize = await getFileSize(localPath);
+  const startOffset =
+    existingSize > 0 && totalSize > 0 && totalSize > existingSize ? existingSize : 0;
+  const filename = remotePath.split('/').filter(Boolean).pop() ?? remotePath;
+  let downloaded = startOffset;
+  const startTime = Date.now();
+  let lastEmit = startTime;
+
+  dlClient.trackProgress((info) => {
+    downloaded = startOffset + info.bytesOverall;
+    const now = Date.now();
+    const elapsed = (now - startTime) / 1000;
+    if (now - lastEmit < 200) return;
+    lastEmit = now;
+    const speed = elapsed > 0 ? downloaded / elapsed : 0;
+    const remaining = totalSize > 0 ? totalSize - downloaded : 0;
+    const eta = speed > 0 && remaining > 0 ? remaining / speed : 0;
+    const p: DownloadProgress = {
+      id: filename,
+      filename,
+      remotePath,
+      localPath,
+      totalSize,
+      downloaded,
+      speed,
+      eta,
+      status: 'downloading',
+    };
+    onProgress?.(p);
+  });
+
+  try {
+    if (startOffset > 0) {
+      await dlClient.downloadTo(localPath, remotePath, startOffset);
+    } else {
+      await dlClient.downloadTo(localPath, remotePath);
+    }
+    const done: DownloadProgress = {
+      id: filename,
+      filename,
+      remotePath,
+      localPath,
+      totalSize: downloaded,
+      downloaded,
+      speed: 0,
+      eta: 0,
+      status: 'completed',
+    };
+    onProgress?.(done);
+  } finally {
+    dlClient.trackProgress(() => {});
+    dlClient.close();
+  }
+}
+
+/**
+ * Download a directory recursively using separate clients per file.
+ */
+export async function downloadDirectoryWithSeparateClient(
+  service: FTPService,
+  remotePath: string,
+  localPath: string,
+  onProgress?: FTPProgressCallback,
+): Promise<void> {
+  await ensureDirectoryExists(localPath);
+  const files = await service.list(remotePath);
+  for (const file of files) {
+    const r = remotePath === '/' ? `/${file.name}` : `${remotePath}/${file.name}`;
+    const l = join(localPath, file.name);
+    if (file.type === 'DIR') {
+      await downloadDirectoryWithSeparateClient(service, r, l, onProgress);
+    } else if (file.type === 'FILE') {
+      await downloadWithSeparateClient(service, r, l, onProgress);
+    }
+  }
 }

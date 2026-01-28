@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { HelpPanelProps } from '../types/index.js';
-import { borders, colors, keys } from '../utils/constants.js';
+import { borders, colors } from '../utils/constants.js';
 
 /**
  * HelpPanel component displaying keyboard shortcuts and commands.
@@ -17,20 +17,25 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
   const borderLine = borders.horizontal.repeat(width - 2);
 
   const shortcuts = [
-    { key: '↑/k', description: 'Move up' },
-    { key: '↓/j', description: 'Move down' },
-    { key: 'Enter', description: 'Select item / Enter directory' },
-    { key: '/', description: 'Search files' },
-    { key: 'd', description: 'Download file' },
+    { key: '\u2191/k', description: 'Move cursor up' },
+    { key: '\u2193/j', description: 'Move cursor down' },
+    { key: '\u2190/Bksp', description: 'Go back (parent directory)' },
+    { key: '\u2192/Enter', description: 'Enter directory' },
+    { key: 'Enter', description: 'Toggle selection (on files)' },
+    { key: 'Space', description: 'Toggle selection on current item' },
+    { key: 'd', description: 'Download selected (or current) items' },
     { key: 'p', description: 'Preview file' },
-    { key: 'i', description: 'Show file info' },
+    { key: 'i', description: 'Show file info (full path)' },
+    { key: '/', description: 'Search files' },
     { key: 'r', description: 'Refresh directory' },
-    { key: '?/h', description: 'Show help' },
-    { key: 'n', description: 'Next page' },
-    { key: 'p', description: 'Previous page' },
-    { key: 'b', description: 'Go back' },
-    { key: 'q/Esc', description: 'Quit / Cancel' },
-    { key: '1-9', description: 'Quick select item by number' },
+    { key: '?/h', description: 'Show this help' },
+    { key: 'n/PgDn', description: 'Next page' },
+    { key: 'PgUp', description: 'Previous page' },
+    { key: 'g', description: 'First page' },
+    { key: 'G', description: 'Last page' },
+    { key: '1-9', description: 'Quick move cursor to item N' },
+    { key: 'Esc', description: 'Clear selection / Go back' },
+    { key: 'q', description: 'Quit application' },
   ];
 
   return (

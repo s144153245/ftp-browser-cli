@@ -98,25 +98,28 @@ export const keys = {
   up: ['up', 'k'],
   down: ['down', 'j'],
   enter: ['return', 'enter'],
-  backspace: ['backspace', 'b'],
-  
+  back: ['left', 'backspace'],
+  forward: ['right'],
+
   // Actions
   search: '/',
   download: 'd',
   preview: 'p',
   info: 'i',
   refresh: 'r',
+  select: 'space',
   help: ['?', 'h'],
-  quit: ['q', 'escape'],
-  
+  quit: 'q',
+  escape: 'escape',
+
   // Pagination
   nextPage: ['n', 'pagedown'],
-  prevPage: ['p', 'pageup'],
+  prevPage: ['pageup'],
   firstPage: 'g',
   lastPage: 'G',
-  
-  // Numbers for quick selection
-  quickSelect: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+
+  // Numbers for quick cursor move
+  quickMove: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
 } as const;
 
 // Text Extensions for Preview
@@ -215,8 +218,8 @@ export const patterns = {
 // Version Information
 export const version = {
   major: 1,
-  minor: 0,
+  minor: 1,
   patch: 0,
   name: 'FTP_Browser-CLI',
-  full: '1.0.0',
+  full: '1.1.0',
 } as const;

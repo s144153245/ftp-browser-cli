@@ -12,7 +12,13 @@ dist/
 node-v*.tar.xz
 
 # Releases
-simple/releases/
+ftp-browser-cli/releases/
+
+# Build output (project-level)
+ftp-browser-cli/dist/
+
+# Dependencies (project-level)
+ftp-browser-cli/node_modules/
 
 # OS files
 .DS_Store

@@ -103,6 +103,7 @@ export interface FileListItemProps {
   item: FileItem;
   index: number;
   isSelected: boolean;
+  isChecked: boolean;
   onSelect: () => void;
   onEnter: () => void;
 }
@@ -181,6 +182,7 @@ export interface UISlice {
   searchResults: FileItem[];
   isSearching: boolean;
   downloads: DownloadProgress[];
+  checkedItems: Set<number>;
   setMode: (mode: AppMode) => void;
   setSelectedIndex: (index: number) => void;
   setCurrentPage: (page: number) => void;
@@ -188,6 +190,9 @@ export interface UISlice {
   addDownload: (download: DownloadProgress) => void;
   updateDownload: (id: string, updates: Partial<DownloadProgress>) => void;
   removeDownload: (id: string) => void;
+  toggleCheck: (index: number) => void;
+  clearChecked: () => void;
+  isItemChecked: (index: number) => boolean;
 }
 
 // Utility Types

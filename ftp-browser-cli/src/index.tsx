@@ -22,11 +22,24 @@ async function main(): Promise<void> {
   }
 
   console.clear();
-  console.log(`\x1b[36m┌─────────────────────────────────────────────────────────┐\x1b[0m`);
-  console.log(`\x1b[36m│\x1b[0m  \x1b[1m\x1b[32m%s\x1b[0m  \x1b[36m│\x1b[0m`, version.name.padEnd(43));
-  console.log(`\x1b[36m│\x1b[0m  Host: %s  \x1b[36m│\x1b[0m`, opts.config.host.padEnd(42));
-  console.log(`\x1b[36m│\x1b[0m  Download dir: %s  \x1b[36m│\x1b[0m`, opts.downloadDir.padEnd(36));
-  console.log(`\x1b[36m└─────────────────────────────────────────────────────────┘\x1b[0m`);
+  const bannerLines = [
+    version.name,
+    `Host: ${opts.config.host}`,
+    `Download dir: ${opts.downloadDir}`,
+  ];
+  const termWidth = process.stdout.columns || 80;
+  // inner width = longest line + 4 (2 padding each side), capped at terminal width - 4
+  const maxLineLen = Math.max(...bannerLines.map((l) => l.length));
+  const boxInner = Math.min(maxLineLen + 4, termWidth - 4);
+  const truncate = (s: string, max: number): string =>
+    s.length > max ? s.slice(0, max - 3) + '...' : s;
+  const pad = (s: string): string => truncate(s, boxInner - 4).padEnd(boxInner - 4);
+  const border = '─'.repeat(boxInner);
+  console.log(`\x1b[36m┌${border}┐\x1b[0m`);
+  console.log(`\x1b[36m│\x1b[0m  \x1b[1m\x1b[32m${pad(bannerLines[0])}\x1b[0m  \x1b[36m│\x1b[0m`);
+  console.log(`\x1b[36m│\x1b[0m  ${pad(bannerLines[1])}  \x1b[36m│\x1b[0m`);
+  console.log(`\x1b[36m│\x1b[0m  ${pad(bannerLines[2])}  \x1b[36m│\x1b[0m`);
+  console.log(`\x1b[36m└${border}┘\x1b[0m`);
   console.log();
 
   const { waitUntilExit } = render(

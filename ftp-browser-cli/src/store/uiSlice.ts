@@ -14,6 +14,8 @@ export interface UIStore extends UISlice {
   prevPage: () => void;
   goToFirstPage: () => void;
   goToLastPage: (totalItems: number) => void;
+  checkedCount: () => number;
+  getCheckedIndices: () => number[];
 }
 
 export const useUIStore = create<UIStore>((set, get) => ({
@@ -25,6 +27,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
   searchResults: [],
   isSearching: false,
   downloads: [],
+  checkedItems: new Set<number>(),
 
   setMode: (mode) => {
     set({ mode });
@@ -70,6 +73,24 @@ export const useUIStore = create<UIStore>((set, get) => ({
   removeDownload: (id) => {
     set({ downloads: get().downloads.filter((d) => d.id !== id) });
   },
+
+  toggleCheck: (index: number) => {
+    const next = new Set(get().checkedItems);
+    if (next.has(index)) {
+      next.delete(index);
+    } else {
+      next.add(index);
+    }
+    set({ checkedItems: next });
+  },
+
+  clearChecked: () => set({ checkedItems: new Set<number>() }),
+
+  isItemChecked: (index: number) => get().checkedItems.has(index),
+
+  checkedCount: () => get().checkedItems.size,
+
+  getCheckedIndices: () => Array.from(get().checkedItems).sort((a, b) => a - b),
 
   resetSelection: () => set({ selectedIndex: 0, currentPage: 0 }),
 

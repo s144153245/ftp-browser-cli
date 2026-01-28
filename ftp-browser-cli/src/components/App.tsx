@@ -2,7 +2,7 @@
  * Main App UI: mode-based routing, stores, hooks.
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import type { AppProps, FileItem } from '../types/index.js';
@@ -16,6 +16,7 @@ import { HelpPanel } from './HelpPanel.js';
 import { ProgressBar } from './ProgressBar.js';
 import { Modal } from './Modal.js';
 import { colors, icons, defaults } from '../utils/constants.js';
+import { formatFileSize } from '../utils/format.js';
 import { useFTPStore } from '../store/ftpSlice.js';
 import { useUIStore } from '../store/uiSlice.js';
 import { useKeyboard, useNavigation, useSearch, useDownload } from '../hooks/index.js';
@@ -36,12 +37,15 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
   const downloads = useUIStore((s) => s.downloads);
   const setCurrentPage = useUIStore((s) => s.setCurrentPage);
   const setSelectedIndex = useUIStore((s) => s.setSelectedIndex);
+  const removeDownload = useUIStore((s) => s.removeDownload);
+  const clearChecked = useUIStore((s) => s.clearChecked);
 
   const files = useFTPStore((s) => s.files);
   const currentPath = useFTPStore((s) => s.currentPath);
   const loading = useFTPStore((s) => s.loading);
   const error = useFTPStore((s) => s.error);
   const connected = useFTPStore((s) => s.connected);
+  const clearError = useFTPStore((s) => s.clearError);
 
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState('');
@@ -57,6 +61,15 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
   const search = useSearch();
   const dl = useDownload(downloadDir);
 
+  // Track previous path to clear selection on navigation
+  const prevPathRef = useRef(currentPath);
+  useEffect(() => {
+    if (prevPathRef.current !== currentPath) {
+      clearChecked();
+      prevPathRef.current = currentPath;
+    }
+  }, [currentPath, clearChecked]);
+
   useEffect(() => {
     setMode('connecting');
   }, []);
@@ -66,6 +79,25 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
       setMode('browse');
     }
   }, [mode, loading, connected, error, setMode]);
+
+  // Auto-remove completed/failed downloads after 5 seconds
+  useEffect(() => {
+    const completed = downloads.filter(
+      (d) => d.status === 'completed' || d.status === 'failed'
+    );
+    if (completed.length === 0) return;
+    const timer = setTimeout(() => {
+      completed.forEach((d) => removeDownload(d.id));
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [downloads, removeDownload]);
+
+  // Auto-clear error after 8 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => clearError(), 8000);
+    return () => clearTimeout(timer);
+  }, [error, clearError]);
 
   const displayItems = mode === 'search' ? searchResults : files;
   const totalPages = Math.max(1, Math.ceil(displayItems.length / itemsPerPage));
@@ -98,9 +130,20 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
       if (!ftp) return;
       try {
         const info = await ftp.getFileInfo(remote);
+        const sizeStr = info.size !== null ? formatFileSize(info.size) : 'N/A';
+        const lines = [
+          `Path: ${remote}`,
+          `Type: ${info.type}`,
+          `Size: ${sizeStr}`,
+          `Date: ${info.date ?? 'N/A'}`,
+          info.permissions ? `Permissions: ${info.permissions}` : '',
+          info.target ? `Target: ${info.target}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n');
         setModal({
           title: `Info: ${item.name}`,
-          message: `Type: ${info.type} | Size: ${info.size ?? 'N/A'} | Date: ${info.date ?? 'N/A'}`,
+          message: lines,
           options: [],
           onSelect: () => setModal(null),
           onCancel: () => setModal(null),
@@ -108,7 +151,7 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
       } catch {
         setModal({
           title: `Info: ${item.name}`,
-          message: 'Failed to fetch file info.',
+          message: `Path: ${remote}\nFailed to fetch file info.`,
           options: [],
           onSelect: () => setModal(null),
           onCancel: () => setModal(null),
@@ -118,33 +161,10 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
     [currentPath]
   );
 
-  const handleShowModal = useCallback(
-    (item: FileItem) => {
-      setModal({
-        title: `File: ${item.name}`,
-        message: `Select an action for ${item.name}:`,
-        options: ['Download', 'Preview', 'Info'],
-        onSelect: (opt) => {
-          setModal(null);
-          if (opt === 'Download') {
-            dl.addFileDownload(item, currentPath);
-          } else if (opt === 'Preview') {
-            handlePreview(item);
-          } else if (opt === 'Info') {
-            handleInfo(item);
-          }
-        },
-        onCancel: () => setModal(null),
-      });
-    },
-    [currentPath, dl, handlePreview, handleInfo]
-  );
-
   useKeyboard({
     downloadDir,
     onPreview: handlePreview,
     onInfo: handleInfo,
-    onShowModal: handleShowModal,
     exit,
   });
 
@@ -198,8 +218,9 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
             setSelectedIndex(i);
           }}
           onEnter={(item) => {
-            if (item.type === 'FILE') handleShowModal(item);
-            else nav.handleEnter(item);
+            if (item.type === 'DIR' || item.type === 'LINK') {
+              nav.handleEnter(item);
+            }
           }}
         />
       )}
