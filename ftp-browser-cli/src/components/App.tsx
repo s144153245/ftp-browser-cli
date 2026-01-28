@@ -15,7 +15,7 @@ import { Preview } from './Preview.js';
 import { HelpPanel } from './HelpPanel.js';
 import { ProgressBar } from './ProgressBar.js';
 import { InfoPanel } from './InfoPanel.js';
-import { colors, icons, defaults, getTerminalWidth } from '../utils/constants.js';
+import { colors, icons, defaults, getTerminalWidth, calculateItemsPerPage } from '../utils/constants.js';
 import { useFTPStore } from '../store/ftpSlice.js';
 import { useUIStore } from '../store/uiSlice.js';
 import { useKeyboard, useNavigation, useSearch, useDownload } from '../hooks/index.js';
@@ -90,6 +90,16 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
     const timer = setTimeout(() => clearError(), 8000);
     return () => clearTimeout(timer);
   }, [error, clearError]);
+
+  // Clear screen and recalculate layout on terminal resize
+  useEffect(() => {
+    const handleResize = () => {
+      process.stdout.write('\x1b[2J\x1b[H');
+      useUIStore.getState().setItemsPerPage(calculateItemsPerPage());
+    };
+    process.stdout.on('resize', handleResize);
+    return () => { process.stdout.off('resize', handleResize); };
+  }, []);
 
   const displayItems = mode === 'search' ? searchResults : files;
   const totalPages = Math.max(1, Math.ceil(displayItems.length / itemsPerPage));

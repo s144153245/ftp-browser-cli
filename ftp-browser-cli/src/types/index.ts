@@ -196,6 +196,7 @@ export interface UISlice {
   clearChecked: () => void;
   isItemChecked: (index: number) => boolean;
   checkAll: (totalItems: number) => void;
+  setItemsPerPage: (count: number) => void;
 }
 
 // Utility Types

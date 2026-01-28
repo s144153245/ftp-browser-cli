@@ -222,9 +222,9 @@ export const patterns = {
 export const version = {
   major: 1,
   minor: 3,
-  patch: 2,
+  patch: 3,
   name: 'FTP_Browser-CLI',
-  full: '1.3.2',
+  full: '1.3.3',
 } as const;
 
 /**

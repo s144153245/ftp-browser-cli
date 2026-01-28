@@ -131,4 +131,6 @@ export const useUIStore = create<UIStore>((set, get) => ({
     const last = Math.max(0, totalPages - 1);
     set({ currentPage: last, selectedIndex: 0 });
   },
+
+  setItemsPerPage: (count) => set({ itemsPerPage: count }),
 }));
