@@ -1,0 +1,23 @@
+CLAUDE.md
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tgz
+*.tar.gz
+
+# Node.js binary
+node-v*.tar.xz
+
+# Releases
+simple/releases/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
