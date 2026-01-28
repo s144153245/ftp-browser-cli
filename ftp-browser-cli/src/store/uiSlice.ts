@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import type { AppMode, FileItem, DownloadProgress, UISlice } from '../types/index.js';
-import { defaults } from '../utils/constants.js';
+import { calculateItemsPerPage } from '../utils/constants.js';
 
 export interface UIStore extends UISlice {
   setSearchResults: (results: FileItem[]) => void;
@@ -16,13 +16,14 @@ export interface UIStore extends UISlice {
   goToLastPage: (totalItems: number) => void;
   checkedCount: () => number;
   getCheckedIndices: () => number[];
+  checkAll: (totalItems: number) => void;
 }
 
 export const useUIStore = create<UIStore>((set, get) => ({
   mode: 'browse',
   selectedIndex: 0,
   currentPage: 0,
-  itemsPerPage: defaults.itemsPerPage,
+  itemsPerPage: calculateItemsPerPage(),
   searchQuery: '',
   searchResults: [],
   isSearching: false,
@@ -87,6 +88,21 @@ export const useUIStore = create<UIStore>((set, get) => ({
   clearChecked: () => set({ checkedItems: new Set<number>() }),
 
   isItemChecked: (index: number) => get().checkedItems.has(index),
+
+  checkAll: (totalItems: number) => {
+    const current = get().checkedItems;
+    if (current.size === totalItems && totalItems > 0) {
+      // All selected -> deselect all
+      set({ checkedItems: new Set<number>() });
+    } else {
+      // Select all indices 0..totalItems-1
+      const all = new Set<number>();
+      for (let i = 0; i < totalItems; i++) {
+        all.add(i);
+      }
+      set({ checkedItems: all });
+    }
+  },
 
   checkedCount: () => get().checkedItems.size,
 

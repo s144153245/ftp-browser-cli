@@ -23,9 +23,9 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
     { key: '\u2192/Enter', description: 'Enter directory' },
     { key: 'Enter', description: 'Toggle selection (on files)' },
     { key: 'Space', description: 'Toggle selection on current item' },
+    { key: 'a', description: 'Select all / Deselect all' },
     { key: 'd', description: 'Download selected (or current) items' },
     { key: 'p', description: 'Preview file' },
-    { key: 'i', description: 'Show file info (full path)' },
     { key: '/', description: 'Search files' },
     { key: 'r', description: 'Refresh directory' },
     { key: '?/h', description: 'Show this help' },
@@ -47,7 +47,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
         {colors.border(borders.vertical)}
         {' '}
         {colors.highlight('Keyboard Shortcuts')}
-        {' '.repeat(Math.max(1, width - 19))}
+        {' '.repeat(Math.max(1, width - 21))}
         {colors.border(borders.vertical)}
       </Text>
       <Text>
@@ -72,7 +72,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
         {colors.border(borders.vertical)}
         {' '}
         {colors.muted('Press Esc or q to close')}
-        {' '.repeat(Math.max(1, width - 24))}
+        {' '.repeat(Math.max(1, width - 26))}
         {colors.border(borders.vertical)}
       </Text>
       <Text>

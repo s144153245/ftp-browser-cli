@@ -45,7 +45,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <Box flexDirection="column" alignItems="center" justifyContent="center">
-      <Box flexDirection="column" borderStyle="single" width={width}>
+      <Box flexDirection="column">
         <Text>
           {colors.border(`${borders.topLeft}${borderLine}${borders.topRight}`)}
         </Text>

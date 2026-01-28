@@ -14,9 +14,8 @@ import { SearchBox } from './SearchBox.js';
 import { Preview } from './Preview.js';
 import { HelpPanel } from './HelpPanel.js';
 import { ProgressBar } from './ProgressBar.js';
-import { Modal } from './Modal.js';
+import { InfoPanel } from './InfoPanel.js';
 import { colors, icons, defaults, getTerminalWidth } from '../utils/constants.js';
-import { formatFileSize } from '../utils/format.js';
 import { useFTPStore } from '../store/ftpSlice.js';
 import { useUIStore } from '../store/uiSlice.js';
 import { useKeyboard, useNavigation, useSearch, useDownload } from '../hooks/index.js';
@@ -49,13 +48,6 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
 
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState('');
-  const [modal, setModal] = useState<{
-    title: string;
-    message: string;
-    options?: string[];
-    onSelect: (o: string) => void;
-    onCancel: () => void;
-  } | null>(null);
 
   const nav = useNavigation();
   const search = useSearch();
@@ -102,6 +94,7 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
   const displayItems = mode === 'search' ? searchResults : files;
   const totalPages = Math.max(1, Math.ceil(displayItems.length / itemsPerPage));
   const globalIndex = currentPage * itemsPerPage + selectedIndex;
+  const selectedItem = displayItems[globalIndex] ?? null;
 
   const handlePreview = useCallback(
     async (item: FileItem) => {
@@ -123,48 +116,9 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
     [currentPath, setMode]
   );
 
-  const handleInfo = useCallback(
-    async (item: FileItem) => {
-      const remote = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`;
-      const ftp = getFtpService();
-      if (!ftp) return;
-      try {
-        const info = await ftp.getFileInfo(remote);
-        const sizeStr = info.size !== null ? formatFileSize(info.size) : 'N/A';
-        const lines = [
-          `Path: ${remote}`,
-          `Type: ${info.type}`,
-          `Size: ${sizeStr}`,
-          `Date: ${info.date ?? 'N/A'}`,
-          info.permissions ? `Permissions: ${info.permissions}` : '',
-          info.target ? `Target: ${info.target}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n');
-        setModal({
-          title: `Info: ${item.name}`,
-          message: lines,
-          options: [],
-          onSelect: () => setModal(null),
-          onCancel: () => setModal(null),
-        });
-      } catch {
-        setModal({
-          title: `Info: ${item.name}`,
-          message: `Path: ${remote}\nFailed to fetch file info.`,
-          options: [],
-          onSelect: () => setModal(null),
-          onCancel: () => setModal(null),
-        });
-      }
-    },
-    [currentPath]
-  );
-
   useKeyboard({
     downloadDir,
     onPreview: handlePreview,
-    onInfo: handleInfo,
     exit,
   });
 
@@ -284,23 +238,17 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
         </Box>
       )}
 
-      <Box height={1} />
+      {(mode === 'browse' || mode === 'search') ? (
+        <InfoPanel item={selectedItem} currentPath={currentPath} />
+      ) : (
+        <Box height={1} />
+      )}
       <StatusBar
         currentPage={currentPage}
         totalPages={totalPages}
         totalItems={displayItems.length}
         mode={mode}
       />
-
-      {modal && (
-        <Modal
-          title={modal.title}
-          message={modal.message}
-          options={modal.options}
-          onSelect={modal.onSelect}
-          onCancel={modal.onCancel}
-        />
-      )}
     </Box>
   );
 };

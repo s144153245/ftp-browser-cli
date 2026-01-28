@@ -10,7 +10,6 @@
  *   Space        Toggle selection on current item
  *   d            Download selected items (or current if none selected)
  *   p            Preview current file
- *   i            Show file info
  *   /            Start search
  *   r            Refresh directory
  *   ?/h          Show help
@@ -34,10 +33,9 @@ import type { FileItem } from '../types/index.js';
 export function useKeyboard(opts: {
   downloadDir: string;
   onPreview: (item: FileItem) => void;
-  onInfo: (item: FileItem) => void;
   exit: () => void;
 }) {
-  const { downloadDir, onPreview, onInfo, exit } = opts;
+  const { downloadDir, onPreview, exit } = opts;
   const nav = useNavigation();
   const dl = useDownload(downloadDir);
 
@@ -52,6 +50,7 @@ export function useKeyboard(opts: {
   const toggleCheck = useUIStore((s) => s.toggleCheck);
   const clearChecked = useUIStore((s) => s.clearChecked);
   const checkedItems = useUIStore((s) => s.checkedItems);
+  const checkAll = useUIStore((s) => s.checkAll);
 
   const files = useFTPStore((s) => s.files);
   const loading = useFTPStore((s) => s.loading);
@@ -212,12 +211,6 @@ export function useKeyboard(opts: {
         return;
       }
 
-      // Info
-      if (input === 'i' && selectedItem) {
-        onInfo(selectedItem);
-        return;
-      }
-
       // Search
       if (input === '/') {
         setMode('search');
@@ -228,6 +221,12 @@ export function useKeyboard(opts: {
       // Refresh
       if (input === 'r') {
         listDirectory(currentPath).catch(() => {});
+        return;
+      }
+
+      // Select all / Deselect all
+      if (input === 'a') {
+        checkAll(displayItems.length);
         return;
       }
 
@@ -256,6 +255,7 @@ export function useKeyboard(opts: {
       setSearchQuery,
       toggleCheck,
       clearChecked,
+      checkAll,
       moveCursor,
       prevPage,
       nextPage,
@@ -265,14 +265,13 @@ export function useKeyboard(opts: {
       nav,
       dl,
       onPreview,
-      onInfo,
       exit,
     ]
   );
 
   useInput((input, key) => {
     if (mode === 'help' || mode === 'preview') {
-      if (input === 'q' || key.escape) {
+      if (input === 'q' || key.escape || key.upArrow || key.downArrow || key.leftArrow || key.rightArrow) {
         setMode('browse');
       }
       return;

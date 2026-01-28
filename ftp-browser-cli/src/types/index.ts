@@ -153,6 +153,11 @@ export interface HelpPanelProps {
   onClose: () => void;
 }
 
+export interface InfoPanelProps {
+  item: FileItem | null;
+  currentPath: string;
+}
+
 // Store Types
 export interface FTPSlice {
   config: FTPConfig | null;
@@ -190,6 +195,7 @@ export interface UISlice {
   toggleCheck: (index: number) => void;
   clearChecked: () => void;
   isItemChecked: (index: number) => boolean;
+  checkAll: (totalItems: number) => void;
 }
 
 // Utility Types

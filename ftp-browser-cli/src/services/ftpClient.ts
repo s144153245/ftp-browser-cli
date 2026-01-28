@@ -42,7 +42,7 @@ function toFileItem(f: FTPFileInfo): FileItem {
     type: (f.isSymbolicLink ? 'LINK' : f.isDirectory ? 'DIR' : 'FILE') as FileItem['type'],
     name: f.name,
     size: f.size ?? null,
-    date: f.modifiedAt ? f.modifiedAt.toISOString() : null,
+    date: f.modifiedAt ? f.modifiedAt.toISOString() : (f.rawModifiedAt || null),
     target: f.isSymbolicLink ? f.link : undefined,
     permissions: f.permissions
       ? formatPermissions(f.permissions, f.isDirectory, f.isSymbolicLink)
@@ -268,7 +268,7 @@ export class FTPService extends EventEmitter implements IFTPService {
         path,
         type: (f.isSymbolicLink ? 'LINK' : f.isDirectory ? 'DIR' : 'FILE') as FileInfo['type'],
         size: f.size ?? null,
-        date: f.modifiedAt ? f.modifiedAt.toISOString() : null,
+        date: f.modifiedAt ? f.modifiedAt.toISOString() : (f.rawModifiedAt || null),
         permissions: f.permissions
           ? formatPermissions(f.permissions, f.isDirectory, f.isSymbolicLink)
           : undefined,

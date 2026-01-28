@@ -89,7 +89,9 @@ export const defaults = {
   
   // Terminal
   minTerminalWidth: 60,
-  maxTerminalWidth: 100,
+  chromeRows: 15, // header + breadcrumb + info panel + status bar + spacing
+  minItemsPerPage: 10,
+  maxItemsPerPage: 40,
 } as const;
 
 // Keyboard Shortcuts
@@ -105,9 +107,10 @@ export const keys = {
   search: '/',
   download: 'd',
   preview: 'p',
-  info: 'i',
+
   refresh: 'r',
   select: 'space',
+  selectAll: 'a',
   help: ['?', 'h'],
   quit: 'q',
   escape: 'escape',
@@ -218,16 +221,32 @@ export const patterns = {
 // Version Information
 export const version = {
   major: 1,
-  minor: 1,
-  patch: 1,
+  minor: 3,
+  patch: 2,
   name: 'FTP_Browser-CLI',
-  full: '1.1.1',
+  full: '1.3.2',
 } as const;
 
 /**
- * Returns the usable terminal width, capped between minTerminalWidth and maxTerminalWidth.
+ * Returns the usable terminal width, with a minimum of minTerminalWidth.
  */
 export function getTerminalWidth(): number {
   const cols = process.stdout.columns || 80;
-  return Math.max(defaults.minTerminalWidth, Math.min(cols, defaults.maxTerminalWidth));
+  return Math.max(defaults.minTerminalWidth, cols);
+}
+
+/**
+ * Returns the current terminal height in rows.
+ */
+export function getTerminalHeight(): number {
+  return process.stdout.rows || 24;
+}
+
+/**
+ * Calculates items per page based on terminal height, reserving space for chrome (header, breadcrumb, status bar).
+ */
+export function calculateItemsPerPage(): number {
+  const rows = getTerminalHeight();
+  const raw = rows - defaults.chromeRows;
+  return Math.min(defaults.maxItemsPerPage, Math.max(defaults.minItemsPerPage, raw));
 }

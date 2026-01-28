@@ -30,6 +30,18 @@ export const formatDate = (date: string | null): string => {
   if (!date) {
     return 'N/A';
   }
+  // Format ISO strings (e.g. "2024-12-30T00:00:00.000Z") as "YYYY-MM-DD HH:MM"
+  if (date.includes('T')) {
+    const d = new Date(date);
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      return `${y}-${m}-${day} ${h}:${min}`;
+    }
+  }
   return date;
 };
 

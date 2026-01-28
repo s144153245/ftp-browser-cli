@@ -10,4 +10,5 @@ export { Preview } from './Preview.js';
 export { ProgressBar } from './ProgressBar.js';
 export { Modal } from './Modal.js';
 export { HelpPanel } from './HelpPanel.js';
+export { InfoPanel } from './InfoPanel.js';
 export { App } from './App.js';

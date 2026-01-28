@@ -12,7 +12,7 @@ export const Preview: React.FC<PreviewProps> = ({
   onClose,
 }) => {
   useInput((input, key) => {
-    if (key.escape || key.return) {
+    if (key.escape || key.return || key.upArrow || key.downArrow || key.leftArrow || key.rightArrow) {
       onClose();
     }
   });
@@ -20,8 +20,11 @@ export const Preview: React.FC<PreviewProps> = ({
   const width = getTerminalWidth();
   const borderLine = borders.horizontal.repeat(width - 2);
   
-  // Limit content to maxPreviewLines
-  const lines = content.split('\n').slice(0, defaults.maxPreviewLines);
+  // Limit content to maxPreviewLines, truncate long lines
+  const maxLineWidth = width - 4; // 2 border chars + 2 padding
+  const lines = content.split('\n').slice(0, defaults.maxPreviewLines).map((line) =>
+    line.length > maxLineWidth ? line.slice(0, maxLineWidth - 3) + '...' : line
+  );
   const displayContent = lines.join('\n');
   const truncated = content.split('\n').length > defaults.maxPreviewLines;
 
