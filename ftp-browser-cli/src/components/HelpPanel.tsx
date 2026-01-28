@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { HelpPanelProps } from '../types/index.js';
-import { borders, colors } from '../utils/constants.js';
+import { borders, colors, getTerminalWidth } from '../utils/constants.js';
 
 /**
  * HelpPanel component displaying keyboard shortcuts and commands.
@@ -13,7 +13,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
     }
   });
 
-  const width = 70;
+  const width = getTerminalWidth();
   const borderLine = borders.horizontal.repeat(width - 2);
 
   const shortcuts = [

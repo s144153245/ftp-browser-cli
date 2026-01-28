@@ -55,7 +55,7 @@ npm start -- --version
 ## Offline Install (target server without internet)
 
 1. On a machine with internet: run `BUILD_SKIP_EXECUTABLE=1 ./scripts/build-complete.sh`.
-2. Copy `releases/ftp-browser-cli-offline-1.0.0-x64.tar.gz` (or the `ftp-browser-cli-offline-*` folder) to the target.
+2. Copy `releases/ftp-browser-cli-offline-1.1.1-x64.tar.gz` (or the `ftp-browser-cli-offline-*` folder) to the target.
 3. On target: `tar -xzf ftp-browser-cli-offline-*.tar.gz`, then `cd ftp-browser-cli-offline-*`, `./install.sh`.
 4. Run `ftp-browser --help` or `ftp-browser <host>`.
 

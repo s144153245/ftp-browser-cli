@@ -139,9 +139,6 @@ export interface PreviewProps {
 
 export interface ProgressBarProps {
   progress: DownloadProgress;
-  onCancel?: () => void;
-  onPause?: () => void;
-  onResume?: () => void;
 }
 
 export interface ModalProps {

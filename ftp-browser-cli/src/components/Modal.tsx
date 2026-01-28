@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { ModalProps } from '../types/index.js';
-import { borders, colors } from '../utils/constants.js';
+import { borders, colors, getTerminalWidth } from '../utils/constants.js';
 
 /**
  * Modal component for displaying dialogs with options.
@@ -40,7 +40,7 @@ export const Modal: React.FC<ModalProps> = ({
     }
   });
 
-  const width = 60;
+  const width = getTerminalWidth() - 10;
   const borderLine = borders.horizontal.repeat(width - 2);
 
   return (

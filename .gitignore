@@ -12,9 +12,10 @@ dist/
 node-v*.tar.xz
 
 # Releases
-ftp-browser-cli/releases/
+releases/
 
 # Build output (project-level)
+ftp-browser-cli/releases/
 ftp-browser-cli/dist/
 
 # Dependencies (project-level)
@@ -27,3 +28,14 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime
+.env
+.env.*

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import type { HeaderProps } from '../types/index.js';
-import { borders, colors, version } from '../utils/constants.js';
+import { borders, colors, version, getTerminalWidth } from '../utils/constants.js';
 
 /**
  * Header component displaying FTP server hostname and version.
@@ -10,11 +10,10 @@ export const Header: React.FC<HeaderProps> = ({ host, version: versionProp }) =>
   const versionStr = versionProp || version.full;
   const title = `FTP Browser - ${host}`;
   const versionText = `v${versionStr}`;
-  
-  // Calculate width (default 70 characters)
-  const width = 70;
+
+  const width = getTerminalWidth();
   const borderLine = borders.horizontal.repeat(width - 2);
-  
+
   // Calculate spacing for version alignment
   const titleLength = title.length;
   const versionLength = versionText.length;

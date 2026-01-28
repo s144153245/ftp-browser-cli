@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { PreviewProps } from '../types/index.js';
-import { borders, colors, defaults } from '../utils/constants.js';
+import { borders, colors, defaults, getTerminalWidth } from '../utils/constants.js';
 
 /**
  * Preview component for displaying file content preview.
@@ -17,7 +17,7 @@ export const Preview: React.FC<PreviewProps> = ({
     }
   });
 
-  const width = 70;
+  const width = getTerminalWidth();
   const borderLine = borders.horizontal.repeat(width - 2);
   
   // Limit content to maxPreviewLines

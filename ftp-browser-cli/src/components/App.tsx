@@ -15,7 +15,7 @@ import { Preview } from './Preview.js';
 import { HelpPanel } from './HelpPanel.js';
 import { ProgressBar } from './ProgressBar.js';
 import { Modal } from './Modal.js';
-import { colors, icons, defaults } from '../utils/constants.js';
+import { colors, icons, defaults, getTerminalWidth } from '../utils/constants.js';
 import { formatFileSize } from '../utils/format.js';
 import { useFTPStore } from '../store/ftpSlice.js';
 import { useUIStore } from '../store/uiSlice.js';
@@ -88,7 +88,7 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
     if (completed.length === 0) return;
     const timer = setTimeout(() => {
       completed.forEach((d) => removeDownload(d.id));
-    }, 5000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, [downloads, removeDownload]);
 
@@ -271,12 +271,15 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
 
       {downloads.length > 0 && (
         <Box flexDirection="column">
+          <Text>
+            {colors.muted(
+              `── Downloads ${
+                '─'.repeat(Math.max(1, getTerminalWidth() - 16))
+              }`
+            )}
+          </Text>
           {downloads.map((d) => (
-            <ProgressBar
-              key={d.id}
-              progress={d}
-              onCancel={() => dl.cancelDownload(d.id)}
-            />
+            <ProgressBar key={d.id} progress={d} />
           ))}
         </Box>
       )}

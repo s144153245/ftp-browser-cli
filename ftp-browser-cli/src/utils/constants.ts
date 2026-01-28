@@ -219,7 +219,15 @@ export const patterns = {
 export const version = {
   major: 1,
   minor: 1,
-  patch: 0,
+  patch: 1,
   name: 'FTP_Browser-CLI',
-  full: '1.1.0',
+  full: '1.1.1',
 } as const;
+
+/**
+ * Returns the usable terminal width, capped between minTerminalWidth and maxTerminalWidth.
+ */
+export function getTerminalWidth(): number {
+  const cols = process.stdout.columns || 80;
+  return Math.max(defaults.minTerminalWidth, Math.min(cols, defaults.maxTerminalWidth));
+}

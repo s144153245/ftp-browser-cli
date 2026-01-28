@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import type { StatusBarProps } from '../types/index.js';
-import { borders, colors } from '../utils/constants.js';
+import { borders, colors, getTerminalWidth } from '../utils/constants.js';
 import { useUIStore } from '../store/uiSlice.js';
 
 /**
@@ -16,19 +16,19 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   const checkedItems = useUIStore((s) => s.checkedItems);
   const checkedCount = checkedItems.size;
 
-  const width = 70;
+  const width = getTerminalWidth();
   const borderLine = borders.horizontal.repeat(width - 2);
 
   // Build pagination text
   const paginationText = `Page ${currentPage + 1}/${totalPages} (${totalItems} items)`;
 
   // Build selected count text
-  const selectedText = checkedCount > 0 ? ` | ${checkedCount} selected` : '';
+  const selectedText = checkedCount > 0 ? ` | ${checkedCount} sel` : '';
 
-  // Build shortcuts text
+  // Build shortcuts text — use shorter labels
   const shortcuts =
     mode === 'browse'
-      ? '[Space]Select [d]Download [p]Preview [?]Help'
+      ? '[Space]Sel [d]DL [p]Prev [?]Help'
       : mode === 'search'
         ? '[Esc]Cancel'
         : mode === 'preview'
@@ -43,7 +43,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   // Calculate spacing accounting for all visible text
   const leftText = paginationText + selectedText;
   const rightText = modeText + shortcuts;
-  const spacing = Math.max(1, width - leftText.length - rightText.length - 4);
+  const available = width - leftText.length - rightText.length - 4;
+  const spacing = Math.max(1, available);
 
   return (
     <Box flexDirection="column">
