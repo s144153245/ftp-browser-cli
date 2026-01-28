@@ -1,11 +1,11 @@
+/**
+ * Custom error types for FTP and file operations.
+ */
+
 import { errorMessages } from '../utils/constants.js';
 
-/**
- * Base FTP Error class
- */
 export class FTPError extends Error {
-  public readonly code: string;
-
+  readonly code: string;
   constructor(message: string, code: string) {
     super(message);
     this.name = 'FTPError';
@@ -14,10 +14,6 @@ export class FTPError extends Error {
   }
 }
 
-/**
- * Connection Error
- * Thrown when connection to FTP server fails
- */
 export class ConnectionError extends FTPError {
   constructor(message: string = errorMessages.connection) {
     super(message, 'CONNECTION_ERROR');
@@ -26,10 +22,6 @@ export class ConnectionError extends FTPError {
   }
 }
 
-/**
- * Authentication Error
- * Thrown when login/authentication fails
- */
 export class AuthenticationError extends FTPError {
   constructor(message: string = errorMessages.login) {
     super(message, 'AUTHENTICATION_ERROR');
@@ -38,10 +30,6 @@ export class AuthenticationError extends FTPError {
   }
 }
 
-/**
- * File Not Found Error
- * Thrown when file or directory doesn't exist
- */
 export class FileNotFoundError extends FTPError {
   constructor(message: string = errorMessages.notFound) {
     super(message, 'FILE_NOT_FOUND');
@@ -50,10 +38,6 @@ export class FileNotFoundError extends FTPError {
   }
 }
 
-/**
- * Permission Error
- * Thrown when access is denied
- */
 export class PermissionError extends FTPError {
   constructor(message: string = errorMessages.accessDenied) {
     super(message, 'PERMISSION_ERROR');
@@ -62,10 +46,6 @@ export class PermissionError extends FTPError {
   }
 }
 
-/**
- * Timeout Error
- * Thrown when operation times out
- */
 export class TimeoutError extends FTPError {
   constructor(message: string = errorMessages.timeout) {
     super(message, 'TIMEOUT_ERROR');
@@ -74,10 +54,6 @@ export class TimeoutError extends FTPError {
   }
 }
 
-/**
- * Download Error
- * Thrown when download operation fails
- */
 export class DownloadError extends FTPError {
   constructor(message: string = errorMessages.downloadFailed) {
     super(message, 'DOWNLOAD_ERROR');
@@ -86,10 +62,6 @@ export class DownloadError extends FTPError {
   }
 }
 
-/**
- * Invalid Path Error
- * Thrown when path is invalid
- */
 export class InvalidPathError extends FTPError {
   constructor(message: string = errorMessages.invalidPath) {
     super(message, 'INVALID_PATH_ERROR');

@@ -1,9 +1,6 @@
 import chalk from 'chalk';
 
-/**
- * Color Scheme
- * All colors use Chalk library
- */
+// Color Scheme
 export const colors = {
   // File types
   directory: chalk.green,
@@ -17,6 +14,7 @@ export const colors = {
   highlight: chalk.yellow,
   error: chalk.red,
   success: chalk.green,
+  warning: chalk.yellow,
   muted: chalk.gray,
   info: chalk.blue,
   
@@ -26,10 +24,7 @@ export const colors = {
   sizeLarge: chalk.red,       // > 100MB
 } as const;
 
-/**
- * Icons
- * Use Unicode emoji characters for icons
- */
+// Icons
 export const icons = {
   // File types
   directory: '📁',
@@ -53,10 +48,7 @@ export const icons = {
   folder: '📂',
 } as const;
 
-/**
- * Border Characters
- * For UI borders and frames
- */
+// Border Characters
 export const borders = {
   topLeft: '╔',
   topRight: '╗',
@@ -71,9 +63,7 @@ export const borders = {
   cross: '╬',
 } as const;
 
-/**
- * Default Configuration
- */
+// Default Configuration
 export const defaults = {
   // FTP
   ftpPort: 21,
@@ -102,9 +92,7 @@ export const defaults = {
   maxTerminalWidth: 100,
 } as const;
 
-/**
- * Keyboard Shortcuts
- */
+// Keyboard Shortcuts
 export const keys = {
   // Navigation
   up: ['up', 'k'],
@@ -131,10 +119,7 @@ export const keys = {
   quickSelect: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
 } as const;
 
-/**
- * Text Extensions for Preview
- * Files with these extensions can be previewed as text
- */
+// Text Extensions for Preview
 export const textExtensions = [
   'txt',
   'log',
@@ -164,17 +149,13 @@ export const textExtensions = [
   'tsv',
 ] as const;
 
-/**
- * File Size Thresholds
- */
+// File Size Thresholds
 export const sizeThresholds = {
   small: 1024 * 1024,        // 1MB
   medium: 100 * 1024 * 1024, // 100MB
 } as const;
 
-/**
- * Error Messages
- */
+// Error Messages
 export const errorMessages = {
   dnsResolve: 'Cannot resolve hostname',
   connection: 'Cannot connect to FTP server',
@@ -187,9 +168,7 @@ export const errorMessages = {
   noPermission: 'No permission to access',
 } as const;
 
-/**
- * Status Messages
- */
+// Status Messages
 export const statusMessages = {
   connecting: 'Connecting...',
   connected: 'Connected',
@@ -202,9 +181,7 @@ export const statusMessages = {
   failed: 'Failed',
 } as const;
 
-/**
- * UI Layout Constants
- */
+// UI Layout Constants
 export const layout = {
   headerHeight: 3,
   statusBarHeight: 2,
@@ -212,9 +189,7 @@ export const layout = {
   padding: 1,
 } as const;
 
-/**
- * File Path Constants
- */
+// File Path Constants
 export const paths = {
   root: '/',
   parent: '..',
@@ -222,9 +197,7 @@ export const paths = {
   separator: '/',
 } as const;
 
-/**
- * Regular Expressions
- */
+// Regular Expressions
 export const patterns = {
   // Unix-style LIST output: drwxr-xr-x 2 user group 4096 Jan 28 10:30 filename
   unixList: /^([d\-l])([rwx\-]{9})\s+\d+\s+\w+\s+\w+\s+(\d+)\s+(\w{3}\s+\d{1,2}\s+[\d:]+)\s+(.+)$/,
@@ -239,9 +212,7 @@ export const patterns = {
   fileExtension: /\.([^.]+)$/,
 } as const;
 
-/**
- * Version Information
- */
+// Version Information
 export const version = {
   major: 1,
   minor: 0,

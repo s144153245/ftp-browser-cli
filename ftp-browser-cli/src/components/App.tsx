@@ -1,255 +1,282 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Text, useApp, useInput, useStdout } from 'ink';
+/**
+ * Main App UI: mode-based routing, stores, hooks.
+ */
+
+import React, { useEffect, useState, useCallback } from 'react';
+import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
-import { FTPService, createFTPService } from '../services/ftpClient.js';
-import type { FileItem, FTPConfig, AppMode, DownloadProgress } from '../types/index.js';
-
-const COLORS = {
-  primary: 'cyan', success: 'green', warning: 'yellow', error: 'red',
-  muted: 'gray', directory: 'green', file: 'white', symlink: 'magenta', border: 'blue',
-} as const;
-
-const ICONS = { directory: '📁', file: '📄', symlink: '🔗' } as const;
-
-interface AppProps {
-  config: FTPConfig;
-  downloadDir: string;
-}
+import type { AppProps, FileItem } from '../types/index.js';
+import { Header } from './Header.js';
+import { Breadcrumb } from './Breadcrumb.js';
+import { FileList } from './FileList.js';
+import { StatusBar } from './StatusBar.js';
+import { SearchBox } from './SearchBox.js';
+import { Preview } from './Preview.js';
+import { HelpPanel } from './HelpPanel.js';
+import { ProgressBar } from './ProgressBar.js';
+import { Modal } from './Modal.js';
+import { colors, icons, defaults } from '../utils/constants.js';
+import { useFTPStore } from '../store/ftpSlice.js';
+import { useUIStore } from '../store/uiSlice.js';
+import { useKeyboard, useNavigation, useSearch, useDownload } from '../hooks/index.js';
+import { getFtpService } from '../store/ftpSlice.js';
 
 export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
   const { exit } = useApp();
-  const { stdout } = useStdout();
-  
-  const [ftp] = useState(() => createFTPService(config));
-  const [mode, setMode] = useState<AppMode>('connecting');
-  const [connected, setConnected] = useState(false);
-  const [currentPath, setCurrentPath] = useState('/');
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
-  const terminalHeight = stdout?.rows || 24;
-  const pageSize = Math.max(5, terminalHeight - 10);
-  const totalPages = Math.ceil(files.length / pageSize);
+  const mode = useUIStore((s) => s.mode);
+  const setMode = useUIStore((s) => s.setMode);
+  const setSearchQuery = useUIStore((s) => s.setSearchQuery);
+  const searchQuery = useUIStore((s) => s.searchQuery);
+  const searchResults = useUIStore((s) => s.searchResults);
+  const isSearching = useUIStore((s) => s.isSearching);
+  const selectedIndex = useUIStore((s) => s.selectedIndex);
+  const currentPage = useUIStore((s) => s.currentPage);
+  const itemsPerPage = useUIStore((s) => s.itemsPerPage);
+  const downloads = useUIStore((s) => s.downloads);
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage);
+  const setSelectedIndex = useUIStore((s) => s.setSelectedIndex);
+
+  const files = useFTPStore((s) => s.files);
+  const currentPath = useFTPStore((s) => s.currentPath);
+  const loading = useFTPStore((s) => s.loading);
+  const error = useFTPStore((s) => s.error);
+  const connected = useFTPStore((s) => s.connected);
+
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [previewContent, setPreviewContent] = useState('');
+  const [modal, setModal] = useState<{
+    title: string;
+    message: string;
+    options?: string[];
+    onSelect: (o: string) => void;
+    onCancel: () => void;
+  } | null>(null);
+
+  const nav = useNavigation();
+  const search = useSearch();
+  const dl = useDownload(downloadDir);
 
   useEffect(() => {
-    const connect = async () => {
-      setIsLoading(true);
-      setMessage('Connecting to FTP server...');
-      try {
-        await ftp.connect();
-        setConnected(true);
-        setMode('browse');
-        await loadDirectory('/');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Connection failed');
-        setMode('browse'); // Error state handled via error message
-      } finally {
-        setIsLoading(false);
-        setMessage(null);
-      }
-    };
-    connect();
-    return () => { ftp.disconnect(); };
+    setMode('connecting');
   }, []);
 
-  const loadDirectory = useCallback(async (path: string) => {
-    setIsLoading(true);
-    setMessage(`Loading ${path}...`);
-    setError(null);
-    try {
-      const items = await ftp.list(path);
-      setFiles(items);
-      setCurrentPath(path);
-      setSelectedIndex(0);
-      setPageIndex(0);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load directory');
-    } finally {
-      setIsLoading(false);
-      setMessage(null);
+  useEffect(() => {
+    if (mode === 'connecting' && !loading && (connected || !!error)) {
+      setMode('browse');
     }
-  }, [ftp]);
+  }, [mode, loading, connected, error, setMode]);
 
-  const navigateToSelected = useCallback(async () => {
-    const selected = files[selectedIndex];
-    if (!selected) return;
+  const displayItems = mode === 'search' ? searchResults : files;
+  const totalPages = Math.max(1, Math.ceil(displayItems.length / itemsPerPage));
+  const globalIndex = currentPage * itemsPerPage + selectedIndex;
 
-    if (selected.type === 'DIR' || selected.type === 'LINK') {
-      const newPath = currentPath === '/' ? `/${selected.name}` : `${currentPath}/${selected.name}`;
-      await loadDirectory(newPath);
-    } else {
-      setMessage(`Downloading ${selected.name}...`);
+  const handlePreview = useCallback(
+    async (item: FileItem) => {
+      if (item.type !== 'FILE') return;
+      const remote = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`;
+      const ftp = getFtpService();
+      if (!ftp) return;
       try {
-        const remotePath = currentPath === '/' ? `/${selected.name}` : `${currentPath}/${selected.name}`;
-        const localPath = `${downloadDir}/${selected.name}`;
-        await ftp.download(remotePath, localPath, (p) => {
-          const percentage = p.totalSize > 0 ? (p.downloaded / p.totalSize) * 100 : 0;
-          setMessage(`Downloading ${selected.name}: ${percentage.toFixed(1)}%`);
-        });
-        setMessage(`✅ Downloaded: ${selected.name}`);
-        setTimeout(() => setMessage(null), 3000);
-      } catch (err) {
-        setError(`Download failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        const content = await ftp.preview(remote, defaults.maxPreviewBytes);
+        setPreviewPath(item.name);
+        setPreviewContent(content);
+        setMode('preview');
+      } catch {
+        setPreviewContent(`Failed to preview ${item.name}`);
+        setPreviewPath(item.name);
+        setMode('preview');
       }
-    }
-  }, [files, selectedIndex, currentPath, downloadDir, ftp, loadDirectory]);
+    },
+    [currentPath, setMode]
+  );
 
-  const goBack = useCallback(async () => {
-    if (currentPath === '/') return;
-    const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
-    await loadDirectory(parentPath);
-  }, [currentPath, loadDirectory]);
+  const handleInfo = useCallback(
+    async (item: FileItem) => {
+      const remote = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`;
+      const ftp = getFtpService();
+      if (!ftp) return;
+      try {
+        const info = await ftp.getFileInfo(remote);
+        setModal({
+          title: `Info: ${item.name}`,
+          message: `Type: ${info.type} | Size: ${info.size ?? 'N/A'} | Date: ${info.date ?? 'N/A'}`,
+          options: [],
+          onSelect: () => setModal(null),
+          onCancel: () => setModal(null),
+        });
+      } catch {
+        setModal({
+          title: `Info: ${item.name}`,
+          message: 'Failed to fetch file info.',
+          options: [],
+          onSelect: () => setModal(null),
+          onCancel: () => setModal(null),
+        });
+      }
+    },
+    [currentPath]
+  );
 
-  useInput((input: string, key: any) => {
-    if (mode === 'help') { setMode('browse'); return; }
-    if (isLoading) return;
+  const handleShowModal = useCallback(
+    (item: FileItem) => {
+      setModal({
+        title: `File: ${item.name}`,
+        message: `Select an action for ${item.name}:`,
+        options: ['Download', 'Preview', 'Info'],
+        onSelect: (opt) => {
+          setModal(null);
+          if (opt === 'Download') {
+            dl.addFileDownload(item, currentPath);
+          } else if (opt === 'Preview') {
+            handlePreview(item);
+          } else if (opt === 'Info') {
+            handleInfo(item);
+          }
+        },
+        onCancel: () => setModal(null),
+      });
+    },
+    [currentPath, dl, handlePreview, handleInfo]
+  );
 
-    if (input === 'q' || (key.ctrl && input === 'c')) { ftp.disconnect(); exit(); return; }
-    if (input === '?' || input === 'h') { setMode('help'); return; }
-    if (key.upArrow || input === 'k') {
-      setSelectedIndex(Math.max(0, selectedIndex - 1));
-      if (selectedIndex - 1 < pageIndex * pageSize) setPageIndex(Math.max(0, pageIndex - 1));
-      return;
-    }
-    if (key.downArrow || input === 'j') {
-      setSelectedIndex(Math.min(files.length - 1, selectedIndex + 1));
-      if (selectedIndex + 1 >= (pageIndex + 1) * pageSize) setPageIndex(Math.min(totalPages - 1, pageIndex + 1));
-      return;
-    }
-    if (input === 'n' || key.pageDown) {
-      setPageIndex(Math.min(totalPages - 1, pageIndex + 1));
-      setSelectedIndex(Math.min(files.length - 1, (pageIndex + 1) * pageSize));
-      return;
-    }
-    if (input === 'p' || key.pageUp) {
-      setPageIndex(Math.max(0, pageIndex - 1));
-      setSelectedIndex(Math.max(0, (pageIndex - 1) * pageSize));
-      return;
-    }
-    if (key.return) { navigateToSelected(); return; }
-    if (input === 'b' || key.backspace) { goBack(); return; }
-    if (input === 'r') { loadDirectory(currentPath); return; }
-    if (/^[1-9]$/.test(input)) {
-      const index = parseInt(input, 10) - 1 + pageIndex * pageSize;
-      if (index < files.length) setSelectedIndex(index);
-      return;
-    }
+  useKeyboard({
+    downloadDir,
+    onPreview: handlePreview,
+    onInfo: handleInfo,
+    onShowModal: handleShowModal,
+    exit,
   });
 
-  const formatSize = (size: number | null): string => {
-    if (size === null) return '    -   ';
-    if (size < 1024) return `${size.toString().padStart(6)}B `;
-    if (size < 1048576) return `${(size / 1024).toFixed(1).padStart(6)}KB`;
-    if (size < 1073741824) return `${(size / 1048576).toFixed(1).padStart(6)}MB`;
-    return `${(size / 1073741824).toFixed(1).padStart(6)}GB`;
-  };
+  const onSearchQuery = useCallback(
+    (q: string) => {
+      setSearchQuery(q);
+      search.runSearchDebounced(q);
+    },
+    [setSearchQuery, search]
+  );
 
-  const startIndex = pageIndex * pageSize;
-  const visibleFiles = files.slice(startIndex, startIndex + pageSize);
-  const numWidth = String(files.length).length;
-
-  if (mode === 'help') {
-    return (
-      <Box flexDirection="column" borderStyle="double" borderColor="cyan" padding={1}>
-        <Text bold color="cyan">Keyboard Shortcuts</Text>
-        <Text />
-        <Text><Text color="cyan">↑/k</Text>     Move up</Text>
-        <Text><Text color="cyan">↓/j</Text>     Move down</Text>
-        <Text><Text color="cyan">Enter</Text>   Open directory / Download file</Text>
-        <Text><Text color="cyan">b</Text>       Go back</Text>
-        <Text><Text color="cyan">r</Text>       Refresh</Text>
-        <Text><Text color="cyan">n/p</Text>     Next/Previous page</Text>
-        <Text><Text color="cyan">?</Text>       Show this help</Text>
-        <Text><Text color="cyan">q</Text>       Quit</Text>
-        <Text />
-        <Text color="gray">Press any key to close</Text>
-      </Box>
-    );
-  }
+  const onSearchCancel = useCallback(() => {
+    search.cancelSearch();
+    setMode('browse');
+    setSearchQuery('');
+  }, [search, setMode, setSearchQuery]);
 
   return (
-    <Box flexDirection="column" width="100%">
-      <Box borderStyle="single" borderColor="blue" paddingX={1}>
-        <Text bold color="cyan">FTP_Browser-CLI - {config.host}</Text>
-        <Box flexGrow={1} />
-        <Text color={connected ? 'green' : 'red'}>{connected ? '● Connected' : '○ Disconnected'}</Text>
-      </Box>
-      
-      <Box paddingX={1}>
-        <Text color="cyan">📍 </Text>
-        <Text color="gray">{currentPath}</Text>
-      </Box>
+    <Box flexDirection="column">
+      <Header host={config.host} />
+      <Box height={1} />
+      <Breadcrumb path={currentPath} />
+      <Box height={1} />
 
-      {isLoading && message && (
-        <Box paddingX={1} paddingY={1}>
-          <Text color="cyan"><Spinner type="dots" /></Text>
-          <Text color="gray"> {message}</Text>
+      {loading && mode === 'connecting' && (
+        <Box>
+          <Text>
+            <Spinner type="dots" /> {colors.info('Connecting...')}
+          </Text>
         </Box>
       )}
-      
+
       {error && (
-        <Box paddingX={1} paddingY={1}>
-          <Text color="red">❌ Error: {error}</Text>
+        <Box>
+          <Text>
+            {icons.error} {colors.error(error)}
+          </Text>
         </Box>
       )}
-      
-      {!isLoading && !error && mode === 'browse' && (
-        <Box flexDirection="column" paddingX={1}>
-          {files.length === 0 ? (
-            <Text color="yellow">(Empty directory)</Text>
-          ) : (
-            visibleFiles.map((file, i) => {
-              const actualIndex = startIndex + i;
-              const isSelected = actualIndex === selectedIndex;
-              const icon = file.type === 'DIR' ? ICONS.directory : file.type === 'LINK' ? ICONS.symlink : ICONS.file;
-              const color = file.type === 'DIR' ? 'green' : file.type === 'LINK' ? 'magenta' : 'white';
-              const displayName = file.type === 'DIR' ? `${file.name}/` : file.name;
-              
-              return (
-                <Box key={`${file.name}-${i}`}>
-                  <Text color={isSelected ? 'cyan' : 'gray'}>{isSelected ? '▸' : ' '}</Text>
-                  <Text color="cyan">[{String(actualIndex + 1).padStart(numWidth)}]</Text>
-                  <Text> {icon} </Text>
-                  <Text bold color={color}>{file.type.padEnd(4)}</Text>
-                  <Text color={color}> {displayName}</Text>
-                  {file.type === 'LINK' && file.target && <Text color="gray"> → {file.target}</Text>}
-                  {file.type === 'FILE' && (
-                    <>
-                      <Box flexGrow={1} />
-                      <Text color="gray">({formatSize(file.size)})</Text>
-                    </>
-                  )}
-                </Box>
-              );
-            })
+
+      {mode === 'browse' && !loading && (
+        <FileList
+          items={displayItems}
+          selectedIndex={globalIndex}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          onSelect={(idx) => {
+            const p = Math.floor(idx / itemsPerPage);
+            const i = idx % itemsPerPage;
+            setCurrentPage(p);
+            setSelectedIndex(i);
+          }}
+          onEnter={(item) => {
+            if (item.type === 'FILE') handleShowModal(item);
+            else nav.handleEnter(item);
+          }}
+        />
+      )}
+
+      {mode === 'search' && (
+        <Box flexDirection="column">
+          <SearchBox
+            isActive
+            query={searchQuery}
+            onSearch={onSearchQuery}
+            onCancel={onSearchCancel}
+            isSearching={isSearching}
+          />
+          {searchResults.length > 0 && (
+            <FileList
+              items={searchResults}
+              selectedIndex={globalIndex}
+              currentPage={currentPage}
+              itemsPerPage={itemsPerPage}
+              onSelect={(idx) => {
+                const p = Math.floor(idx / itemsPerPage);
+                const i = idx % itemsPerPage;
+                setCurrentPage(p);
+                setSelectedIndex(i);
+              }}
+              onEnter={(item) => {
+                if (item.type === 'FILE') handlePreview(item);
+                else nav.handleEnter(item);
+              }}
+            />
           )}
         </Box>
       )}
 
-      {message && !isLoading && (
-        <Box paddingX={1}>
-          <Text color="green">{message}</Text>
+      {mode === 'preview' && previewPath && (
+        <Preview
+          filePath={previewPath}
+          content={previewContent}
+          onClose={() => {
+            setMode('browse');
+            setPreviewPath(null);
+            setPreviewContent('');
+          }}
+        />
+      )}
+
+      {mode === 'help' && <HelpPanel onClose={() => setMode('browse')} />}
+
+      {downloads.length > 0 && (
+        <Box flexDirection="column">
+          {downloads.map((d) => (
+            <ProgressBar
+              key={d.id}
+              progress={d}
+              onCancel={() => dl.cancelDownload(d.id)}
+            />
+          ))}
         </Box>
       )}
-      
-      <Box borderStyle="single" borderColor="blue" paddingX={1} justifyContent="space-between">
-        <Box>
-          {totalPages > 1 && <Text color="gray">Page {pageIndex + 1}/{totalPages} ({files.length} items)</Text>}
-        </Box>
-        <Box>
-          <Text color="cyan">[↑↓]</Text><Text color="gray">Nav </Text>
-          <Text color="cyan">[Enter]</Text><Text color="gray">Open </Text>
-          <Text color="cyan">[b]</Text><Text color="gray">Back </Text>
-          <Text color="cyan">[?]</Text><Text color="gray">Help </Text>
-          <Text color="cyan">[q]</Text><Text color="gray">Quit</Text>
-        </Box>
-      </Box>
+
+      <Box height={1} />
+      <StatusBar
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={displayItems.length}
+        mode={mode}
+      />
+
+      {modal && (
+        <Modal
+          title={modal.title}
+          message={modal.message}
+          options={modal.options}
+          onSelect={modal.onSelect}
+          onCancel={modal.onCancel}
+        />
+      )}
     </Box>
   );
 };
-
-export default App;

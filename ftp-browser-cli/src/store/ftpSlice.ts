@@ -1,17 +1,15 @@
-import { create } from 'zustand';
-import { FTPService, createFTPService } from '../services/ftpClient.js';
-import type { FTPSlice, FTPConfig } from '../types/index.js';
-import { defaults, paths } from '../utils/constants.js';
-
-// Store FTP service instance outside the store (closure)
-let ftpService: FTPService | null = null;
-
 /**
- * FTP Slice
- * Manages FTP connection state, file listing, and navigation
+ * FTP store: connection, current path, file list, navigate, goBack.
  */
+
+import { create } from 'zustand';
+import { createFTPService, setFtpService } from '../services/index.js';
+import type { FTPSlice, FTPConfig } from '../types/index.js';
+import { paths } from '../utils/constants.js';
+
+let ftpService: import('../services/ftpClient.js').FTPService | null = null;
+
 export const useFTPStore = create<FTPSlice>((set, get) => ({
-  // State
   config: null,
   connected: false,
   currentPath: paths.root,
@@ -19,65 +17,48 @@ export const useFTPStore = create<FTPSlice>((set, get) => ({
   loading: false,
   error: null,
 
-  // Actions
   connect: async (config: FTPConfig) => {
-    // Set loading state
     set({ loading: true, error: null });
-
     try {
-      // Create FTP service instance
-      ftpService = createFTPService({
+      const svc = createFTPService({
         host: config.host,
-        port: config.port ?? defaults.ftpPort,
-        user: config.user ?? defaults.ftpUser,
-        password: config.password ?? defaults.ftpPassword,
-        secure: config.secure ?? defaults.ftpSecure,
-        timeout: config.timeout ?? defaults.ftpTimeout,
-        passive: config.passive ?? defaults.ftpPassive,
+        port: config.port,
+        user: config.user,
+        password: config.password,
+        secure: config.secure,
+        timeout: config.timeout,
+        passive: config.passive,
       });
-
-      // Establish connection
-      const connected = await ftpService.connect();
-      
-      if (connected) {
-        // Set connected state and config
-        set({
-          connected: true,
-          config,
-          loading: false,
-          error: null,
-          currentPath: paths.root,
-        });
-
-        // Automatically list root directory
-        const rootFiles = await ftpService.list(paths.root);
-        set({
-          files: rootFiles,
-          currentPath: paths.root,
-        });
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Connection failed';
+      ftpService = svc;
+      const ok = await svc.connect();
+      if (!ok) throw new Error('Connection failed');
+      setFtpService(svc);
       set({
-        connected: false,
+        connected: true,
+        config,
         loading: false,
-        error: errorMessage,
-        config: null,
+        error: null,
+        currentPath: paths.root,
       });
+      const rootFiles = await svc.list(paths.root);
+      set({ files: rootFiles, currentPath: paths.root });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Connection failed';
       ftpService = null;
-      throw error;
+      setFtpService(null);
+      set({ connected: false, loading: false, error: msg, config: null });
+      throw err;
     }
   },
 
   disconnect: async () => {
     set({ loading: true });
-
     try {
       if (ftpService) {
         await ftpService.disconnect();
         ftpService = null;
+        setFtpService(null);
       }
-
       set({
         connected: false,
         config: null,
@@ -86,70 +67,43 @@ export const useFTPStore = create<FTPSlice>((set, get) => ({
         loading: false,
         error: null,
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Disconnect failed';
-      set({
-        loading: false,
-        error: errorMessage,
-      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Disconnect failed';
+      set({ loading: false, error: msg });
     }
   },
 
   listDirectory: async (path: string) => {
-    if (!ftpService || !get().connected) {
-      throw new Error('Not connected to FTP server');
-    }
-
+    if (!ftpService || !get().connected) throw new Error('Not connected to FTP server');
     set({ loading: true, error: null });
-
     try {
       const files = await ftpService.list(path);
-      set({
-        files,
-        currentPath: path,
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to list directory';
-      set({
-        loading: false,
-        error: errorMessage,
-      });
-      throw error;
+      set({ files, currentPath: path, loading: false, error: null });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to list directory';
+      set({ loading: false, error: msg });
+      throw err;
     }
   },
 
   navigate: async (path: string) => {
-    // Normalize path
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    
-    // Automatically list directory after navigation
-    await get().listDirectory(normalizedPath);
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    await get().listDirectory(normalized);
   },
 
   goBack: async () => {
-    const currentPath = get().currentPath;
-    
-    // If already at root, do nothing
-    if (currentPath === paths.root) {
-      return;
-    }
-
-    // Get parent directory
-    const pathParts = currentPath.split('/').filter(Boolean);
-    pathParts.pop();
-    const parentPath = pathParts.length > 0 ? `/${pathParts.join('/')}` : paths.root;
-
-    // Navigate to parent
-    await get().navigate(parentPath);
+    const cur = get().currentPath;
+    if (cur === paths.root) return;
+    const parts = cur.split('/').filter(Boolean);
+    parts.pop();
+    const parent = parts.length ? `/${parts.join('/')}` : paths.root;
+    await get().navigate(parent);
   },
 
-  setError: (error: string | null) => {
-    set({ error });
-  },
-
-  clearError: () => {
-    set({ error: null });
-  },
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
 }));
+
+export function getFtpService(): typeof ftpService {
+  return ftpService;
+}

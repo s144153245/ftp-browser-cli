@@ -1,0 +1,57 @@
+{
+  "name": "ftp-browser-cli",
+  "version": "1.0.0",
+  "description": "FTP Browser CLI - Interactive terminal-based FTP file browser",
+  "main": "dist/cli.js",
+  "bin": {
+    "ftp-browser": "./dist/cli.js"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.tsx",
+    "build": "tsx scripts/build.ts",
+    "build:executable": "tsx scripts/build-executable.ts",
+    "build:package": "tsx scripts/build-offline-package.ts",
+    "build:complete": "./scripts/build-complete.sh",
+    "typecheck": "tsc --noEmit",
+    "pre-release": "tsx scripts/pre-release-check.ts",
+    "start": "node dist/cli.js",
+    "run": "tsx src/index.tsx"
+  },
+  "pkg": {
+    "scripts": "dist/cli.js",
+    "assets": [],
+    "targets": ["node18-linux-x64"],
+    "outputPath": "releases"
+  },
+  "keywords": [
+    "ftp",
+    "cli",
+    "terminal",
+    "browser",
+    "ink",
+    "react"
+  ],
+  "author": "Wistron MPA",
+  "license": "MIT",
+  "dependencies": {
+    "basic-ftp": "^5.0.5",
+    "chalk": "^5.3.0",
+    "ink": "^5.0.1",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
+    "react": "^18.2.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "esbuild": "^0.27.2",
+    "pkg": "^5.8.1",
+    "tsx": "^4.15.6",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

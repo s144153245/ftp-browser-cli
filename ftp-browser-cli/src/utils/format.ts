@@ -1,88 +1,75 @@
-import { defaults } from './constants.js';
+import type { FormatSizeFunction } from '../types/index.js';
 
 /**
  * Formats file size in bytes to human-readable string.
  * @param size - File size in bytes, or null if unknown
  * @returns Formatted string (e.g., "1.5 MB")
  */
-export function formatFileSize(size: number | null): string {
-  if (size === null) {
-    return '    -   ';
+export const formatFileSize: FormatSizeFunction = (size: number | null): string => {
+  if (size === null || size === undefined) {
+    return 'N/A';
   }
-  
+
   if (size < 1024) {
-    return `${size.toString().padStart(6)}B `;
+    return `${size}B`;
+  } else if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  } else if (size < 1024 * 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  } else {
+    return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   }
-  
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1).padStart(6)}KB`;
-  }
-  
-  if (size < 1024 * 1024 * 1024) {
-    return `${(size / (1024 * 1024)).toFixed(1).padStart(6)}MB`;
-  }
-  
-  return `${(size / (1024 * 1024 * 1024)).toFixed(1).padStart(6)}GB`;
-}
+};
 
 /**
- * Formats date string to human-readable format.
- * @param date - Date string, or null if unknown
+ * Formats date string to readable format.
+ * @param date - Date string or null
  * @returns Formatted date string
  */
-export function formatDate(date: string | null): string {
-  if (date === null) {
-    return '    -   ';
+export const formatDate = (date: string | null): string => {
+  if (!date) {
+    return 'N/A';
   }
-  
-  try {
-    // Try to parse the date string
-    const parsedDate = new Date(date);
-    if (isNaN(parsedDate.getTime())) {
-      return date; // Return original if parsing fails
-    }
-    
-    // Format as YYYY-MM-DD HH:mm
-    const year = parsedDate.getFullYear();
-    const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
-    const day = String(parsedDate.getDate()).padStart(2, '0');
-    const hours = String(parsedDate.getHours()).padStart(2, '0');
-    const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
-    
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
-  } catch {
-    return date; // Return original if any error occurs
-  }
-}
+  return date;
+};
 
 /**
- * Truncates text with ellipsis if it exceeds max length.
- * @param text - Text to truncate
- * @param maxLen - Maximum length
- * @returns Truncated text with ellipsis if needed
+ * Formats path string (truncates if too long).
+ * @param path - Path string
+ * @param maxLength - Maximum length (default: 60)
+ * @returns Formatted path string
  */
-export function truncateText(text: string, maxLen: number): string {
-  if (text.length <= maxLen) {
-    return text;
+export const formatPath = (path: string, maxLength: number = 60): string => {
+  if (path.length <= maxLength) {
+    return path;
   }
-  
-  return text.slice(0, maxLen - 3) + '...';
-}
+  return `...${path.slice(-(maxLength - 3))}`;
+};
 
 /**
- * Gets terminal width with min/max constraints.
- * @returns Terminal width (min 60, max 100)
+ * Formats time in seconds to human-readable string.
+ * @param seconds - Time in seconds
+ * @returns Formatted string (e.g., "2m 30s")
  */
-export function getTerminalWidth(): number {
-  const width = process.stdout.columns || defaults.minTerminalWidth;
-  
-  if (width < defaults.minTerminalWidth) {
-    return defaults.minTerminalWidth;
+export const formatTime = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  } else if (seconds < 3600) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return secs > 0 ? `${minutes}m ${secs}s` : `${minutes}m`;
+  } else {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
-  
-  if (width > defaults.maxTerminalWidth) {
-    return defaults.maxTerminalWidth;
-  }
-  
-  return width;
-}
+};
+
+/**
+ * Formats speed in bytes per second to human-readable string.
+ * @param bytesPerSecond - Speed in bytes per second
+ * @returns Formatted string (e.g., "1.2 MB/s")
+ */
+export const formatSpeed = (bytesPerSecond: number): string => {
+  return `${formatFileSize(bytesPerSecond)}/s`;
+};

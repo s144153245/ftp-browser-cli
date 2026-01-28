@@ -1,13 +1,22 @@
+/**
+ * UI store: mode, selection, pagination, search, downloads.
+ */
+
 import { create } from 'zustand';
-import type { UISlice, AppMode, FileItem, DownloadProgress } from '../types/index.js';
+import type { AppMode, FileItem, DownloadProgress, UISlice } from '../types/index.js';
 import { defaults } from '../utils/constants.js';
 
-/**
- * UI Slice
- * Manages UI state: mode, selection, pagination, search, downloads
- */
-export const useUIStore = create<UISlice>((set, get) => ({
-  // State
+export interface UIStore extends UISlice {
+  setSearchResults: (results: FileItem[]) => void;
+  setIsSearching: (v: boolean) => void;
+  resetSelection: () => void;
+  nextPage: (totalItems: number) => void;
+  prevPage: () => void;
+  goToFirstPage: () => void;
+  goToLastPage: (totalItems: number) => void;
+}
+
+export const useUIStore = create<UIStore>((set, get) => ({
   mode: 'browse',
   selectedIndex: 0,
   currentPage: 0,
@@ -17,131 +26,72 @@ export const useUIStore = create<UISlice>((set, get) => ({
   isSearching: false,
   downloads: [],
 
-  // Actions
-  setMode: (mode: AppMode) => {
+  setMode: (mode) => {
     set({ mode });
-    // Reset selection when mode changes (except when going to browse mode)
-    if (mode !== 'browse') {
-      set({ selectedIndex: 0, currentPage: 0 });
-    }
+    if (mode !== 'browse') set({ selectedIndex: 0, currentPage: 0 });
   },
 
-  setSelectedIndex: (index: number) => {
-    const state = get();
-    // Validate index is within bounds
-    const maxIndex = state.searchResults.length > 0 
-      ? state.searchResults.length - 1 
-      : 0; // Will be validated against actual files when used
-    
-    const validIndex = Math.max(0, Math.min(index, maxIndex));
-    set({ selectedIndex: validIndex });
-  },
+  setSelectedIndex: (index) => set({ selectedIndex: Math.max(0, index) }),
 
-  setCurrentPage: (page: number) => {
-    const state = get();
-    // Calculate total pages based on current file list length
-    // This will be properly calculated in selectors
-    const totalPages = Math.ceil(
-      (state.searchResults.length > 0 ? state.searchResults.length : 0) / state.itemsPerPage
-    );
-    const validPage = Math.max(0, Math.min(page, Math.max(0, totalPages - 1)));
-    set({ currentPage: validPage });
-    // Reset selection when page changes
-    set({ selectedIndex: 0 });
-  },
+  setCurrentPage: (page) => set({ currentPage: Math.max(0, page), selectedIndex: 0 }),
 
-  setItemsPerPage: (itemsPerPage: number) => {
-    set({ itemsPerPage, currentPage: 0, selectedIndex: 0 });
-  },
-
-  setSearchQuery: (query: string) => {
+  setSearchQuery: (query) => {
     set({ searchQuery: query });
-    // Clear results when query changes
-    if (query === '') {
-      set({ searchResults: [], isSearching: false });
-    }
+    if (query === '') set({ searchResults: [], isSearching: false });
   },
 
-  setSearchResults: (results: FileItem[]) => {
-    set({ 
-      searchResults: results,
-      selectedIndex: 0,
-      currentPage: 0,
-    });
+  setSearchResults: (results) => {
+    set({ searchResults: results, selectedIndex: 0, currentPage: 0 });
   },
 
-  setIsSearching: (isSearching: boolean) => {
-    set({ isSearching });
-  },
+  setIsSearching: (v) => set({ isSearching: v }),
 
-  addDownload: (download: DownloadProgress) => {
+  addDownload: (d) => {
     const state = get();
-    // Check if download with same ID already exists
-    const existingIndex = state.downloads.findIndex(d => d.id === download.id);
-    if (existingIndex >= 0) {
-      // Update existing download
-      const updatedDownloads = [...state.downloads];
-      updatedDownloads[existingIndex] = download;
-      set({ downloads: updatedDownloads });
+    const idx = state.downloads.findIndex((x) => x.id === d.id);
+    if (idx >= 0) {
+      const next = [...state.downloads];
+      next[idx] = d;
+      set({ downloads: next });
     } else {
-      // Add new download
-      set({ downloads: [...state.downloads, download] });
+      set({ downloads: [...state.downloads, d] });
     }
   },
 
-  updateDownload: (id: string, updates: Partial<DownloadProgress>) => {
+  updateDownload: (id, u) => {
     const state = get();
-    const downloadIndex = state.downloads.findIndex(d => d.id === id);
-    if (downloadIndex >= 0) {
-      const updatedDownloads = [...state.downloads];
-      updatedDownloads[downloadIndex] = {
-        ...updatedDownloads[downloadIndex],
-        ...updates,
-      };
-      set({ downloads: updatedDownloads });
-    }
+    const idx = state.downloads.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    const next = [...state.downloads];
+    next[idx] = { ...next[idx], ...u };
+    set({ downloads: next });
   },
 
-  removeDownload: (id: string) => {
-    const state = get();
-    set({ downloads: state.downloads.filter(d => d.id !== id) });
+  removeDownload: (id) => {
+    set({ downloads: get().downloads.filter((d) => d.id !== id) });
   },
 
-  resetSelection: () => {
-    set({ selectedIndex: 0, currentPage: 0 });
-  },
+  resetSelection: () => set({ selectedIndex: 0, currentPage: 0 }),
 
-  nextPage: () => {
+  nextPage: (totalItems) => {
     const state = get();
-    const totalItems = state.searchResults.length > 0 
-      ? state.searchResults.length 
-      : 0; // Will use actual files count from FTP slice
     const totalPages = Math.ceil(totalItems / state.itemsPerPage);
-    const nextPage = Math.min(state.currentPage + 1, Math.max(0, totalPages - 1));
-    if (nextPage !== state.currentPage) {
-      set({ currentPage: nextPage, selectedIndex: 0 });
-    }
+    const next = Math.min(state.currentPage + 1, Math.max(0, totalPages - 1));
+    if (next !== state.currentPage) set({ currentPage: next, selectedIndex: 0 });
   },
 
   prevPage: () => {
     const state = get();
-    const prevPage = Math.max(0, state.currentPage - 1);
-    if (prevPage !== state.currentPage) {
-      set({ currentPage: prevPage, selectedIndex: 0 });
-    }
+    const prev = Math.max(0, state.currentPage - 1);
+    if (prev !== state.currentPage) set({ currentPage: prev, selectedIndex: 0 });
   },
 
-  goToFirstPage: () => {
-    set({ currentPage: 0, selectedIndex: 0 });
-  },
+  goToFirstPage: () => set({ currentPage: 0, selectedIndex: 0 }),
 
-  goToLastPage: () => {
+  goToLastPage: (totalItems) => {
     const state = get();
-    const totalItems = state.searchResults.length > 0 
-      ? state.searchResults.length 
-      : 0; // Will use actual files count from FTP slice
     const totalPages = Math.ceil(totalItems / state.itemsPerPage);
-    const lastPage = Math.max(0, totalPages - 1);
-    set({ currentPage: lastPage, selectedIndex: 0 });
+    const last = Math.max(0, totalPages - 1);
+    set({ currentPage: last, selectedIndex: 0 });
   },
 }));

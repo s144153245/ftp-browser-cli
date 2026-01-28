@@ -1,8 +1,4 @@
 // Core Types
-
-/**
- * FTP Configuration
- */
 export interface FTPConfig {
   host: string;
   port?: number;
@@ -13,14 +9,8 @@ export interface FTPConfig {
   passive?: boolean;
 }
 
-/**
- * File Type
- */
 export type FileType = 'DIR' | 'FILE' | 'LINK';
 
-/**
- * File Item
- */
 export interface FileItem {
   type: FileType;
   name: string;
@@ -30,14 +20,8 @@ export interface FileItem {
   permissions?: string; // Unix permissions string (e.g., "drwxr-xr-x")
 }
 
-/**
- * Application Mode
- */
 export type AppMode = 'browse' | 'search' | 'preview' | 'download' | 'help' | 'connecting';
 
-/**
- * Application State
- */
 export interface AppState {
   mode: AppMode;
   connected: boolean;
@@ -47,9 +31,6 @@ export interface AppState {
   loading: boolean;
 }
 
-/**
- * Search State
- */
 export interface SearchState {
   query: string;
   results: FileItem[];
@@ -59,14 +40,8 @@ export interface SearchState {
   maxDepth: number; // default: 5
 }
 
-/**
- * Download Status
- */
 export type DownloadStatus = 'pending' | 'downloading' | 'completed' | 'failed' | 'paused' | 'cancelled';
 
-/**
- * Download Progress
- */
 export interface DownloadProgress {
   id: string; // unique identifier
   filename: string;
@@ -80,33 +55,17 @@ export interface DownloadProgress {
   error?: string;
 }
 
-/**
- * FTP Event Type
- */
 export type FTPEventType = 'progress' | 'error' | 'connected' | 'disconnected';
 
-/**
- * FTP Event
- */
 export interface FTPEvent {
   type: FTPEventType;
   data?: any;
   error?: Error;
 }
 
-/**
- * FTP Progress Callback
- */
 export type FTPProgressCallback = (progress: DownloadProgress) => void;
-
-/**
- * FTP Error Callback
- */
 export type FTPErrorCallback = (error: Error) => void;
 
-/**
- * File Info
- */
 export interface FileInfo {
   path: string;
   type: FileType;
@@ -117,18 +76,20 @@ export interface FileInfo {
 }
 
 // Component Props Types
-
-/**
- * App Component Props
- */
 export interface AppProps {
   config: FTPConfig;
   downloadDir: string;
 }
 
-/**
- * FileList Component Props
- */
+export interface HeaderProps {
+  host: string;
+  version?: string;
+}
+
+export interface BreadcrumbProps {
+  path: string;
+}
+
 export interface FileListProps {
   items: FileItem[];
   selectedIndex: number;
@@ -138,27 +99,43 @@ export interface FileListProps {
   onEnter: (item: FileItem) => void;
 }
 
-/**
- * SearchBox Component Props
- */
-export interface SearchBoxProps {
-  isActive: boolean;
-  onSearch: (query: string) => void;
+export interface FileListItemProps {
+  item: FileItem;
+  index: number;
+  isSelected: boolean;
+  onSelect: () => void;
+  onEnter: () => void;
+}
+
+export interface StatusBarProps {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  mode: AppMode;
+}
+
+export interface InputPromptProps {
+  prompt: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
   onCancel: () => void;
 }
 
-/**
- * Preview Component Props
- */
+export interface SearchBoxProps {
+  isActive: boolean;
+  query: string;
+  onSearch: (query: string) => void;
+  onCancel: () => void;
+  isSearching?: boolean;
+}
+
 export interface PreviewProps {
   filePath: string;
   content: string;
   onClose: () => void;
 }
 
-/**
- * ProgressBar Component Props
- */
 export interface ProgressBarProps {
   progress: DownloadProgress;
   onCancel?: () => void;
@@ -166,11 +143,19 @@ export interface ProgressBarProps {
   onResume?: () => void;
 }
 
-// Store Types
+export interface ModalProps {
+  title: string;
+  message: string;
+  options?: string[];
+  onSelect: (option: string) => void;
+  onCancel: () => void;
+}
 
-/**
- * FTP Slice
- */
+export interface HelpPanelProps {
+  onClose: () => void;
+}
+
+// Store Types
 export interface FTPSlice {
   config: FTPConfig | null;
   connected: boolean;
@@ -187,9 +172,6 @@ export interface FTPSlice {
   clearError: () => void;
 }
 
-/**
- * UI Slice
- */
 export interface UISlice {
   mode: AppMode;
   selectedIndex: number;
@@ -202,122 +184,62 @@ export interface UISlice {
   setMode: (mode: AppMode) => void;
   setSelectedIndex: (index: number) => void;
   setCurrentPage: (page: number) => void;
-  setItemsPerPage: (itemsPerPage: number) => void;
   setSearchQuery: (query: string) => void;
-  setSearchResults: (results: FileItem[]) => void;
-  setIsSearching: (isSearching: boolean) => void;
   addDownload: (download: DownloadProgress) => void;
   updateDownload: (id: string, updates: Partial<DownloadProgress>) => void;
   removeDownload: (id: string) => void;
-  resetSelection: () => void;
-  nextPage: () => void;
-  prevPage: () => void;
-  goToFirstPage: () => void;
-  goToLastPage: () => void;
-}
-
-// Service Types
-
-/**
- * FTP Service Interface
- */
-export interface IFTPService {
-  connect(): Promise<boolean>;
-  disconnect(): Promise<void>;
-  list(path: string): Promise<FileItem[]>;
-  download(remotePath: string, localPath: string, onProgress?: FTPProgressCallback): Promise<void>;
-  downloadDirectory(remotePath: string, localPath: string, onProgress?: FTPProgressCallback): Promise<void>;
-  getFileInfo(path: string): Promise<FileInfo>;
-  preview(path: string, maxBytes?: number): Promise<string>;
-  search(path: string, pattern: string, maxDepth?: number): Promise<FileItem[]>;
-  on(event: FTPEventType, callback: FTPProgressCallback | FTPErrorCallback): void;
-  off(event: FTPEventType, callback: FTPProgressCallback | FTPErrorCallback): void;
-}
-
-/**
- * File Parser Interface
- */
-export interface IFileParser {
-  parseListOutput(output: string): FileItem[];
-  parseUnixList(line: string): FileItem | null;
-  parseWindowsList(line: string): FileItem | null;
-}
-
-/**
- * Download Manager Interface
- */
-export interface IDownloadManager {
-  addDownload(remotePath: string, localPath: string): string; // returns download ID
-  cancelDownload(id: string): void;
-  pauseDownload(id: string): void;
-  resumeDownload(id: string): void;
-  getDownloads(): DownloadProgress[];
-  onProgress(id: string, callback: FTPProgressCallback): void;
 }
 
 // Utility Types
-
-/**
- * Keyboard Event Handler
- */
 export type KeyboardHandler = (key: string, meta: {
   ctrl: boolean;
   shift: boolean;
   alt: boolean;
 }) => void;
 
-/**
- * Format Size Function
- */
 export type FormatSizeFunction = (size: number | null) => string;
-
-/**
- * Format Date Function
- */
 export type FormatDateFunction = (date: string | null) => string;
-
-/**
- * Format Path Function
- */
 export type FormatPathFunction = (path: string) => string;
 
-// Constants Types
+// Service interfaces (Group 02)
+export interface IFileParser {
+  parseListOutput(output: string): FileItem[];
+  parseUnixList(line: string): FileItem | null;
+  parseWindowsList(line: string): FileItem | null;
+}
 
-/**
- * Color Name
- */
-export type ColorName = 
-  | 'directory'
-  | 'file'
-  | 'symlink'
-  | 'executable'
-  | 'border'
-  | 'selected'
-  | 'highlight'
-  | 'error'
-  | 'success'
-  | 'muted'
-  | 'sizeSmall'
-  | 'sizeMedium'
-  | 'sizeLarge';
+export interface IFTPService {
+  connect(): Promise<boolean>;
+  disconnect(): Promise<void>;
+  list(path: string): Promise<FileItem[]>;
+  download(
+    remotePath: string,
+    localPath: string,
+    onProgress?: FTPProgressCallback
+  ): Promise<void>;
+  downloadDirectory(
+    remotePath: string,
+    localPath: string,
+    onProgress?: FTPProgressCallback
+  ): Promise<void>;
+  getFileInfo(path: string): Promise<FileInfo>;
+  preview(path: string, maxBytes?: number): Promise<string>;
+  search(path: string, pattern: string, maxDepth?: number): Promise<FileItem[]>;
+  on(
+    event: FTPEventType,
+    callback: FTPProgressCallback | FTPErrorCallback
+  ): void;
+  off(
+    event: FTPEventType,
+    callback: FTPProgressCallback | FTPErrorCallback
+  ): void;
+}
 
-/**
- * Icon Type
- */
-export type IconType =
-  | 'directory'
-  | 'file'
-  | 'symlink'
-  | 'image'
-  | 'video'
-  | 'audio'
-  | 'archive'
-  | 'code'
-  | 'text'
-  | 'pdf'
-  | 'loading'
-  | 'success'
-  | 'error'
-  | 'warning'
-  | 'download'
-  | 'search';
+export interface IDownloadManager {
+  addDownload(remotePath: string, localPath: string): string;
+  cancelDownload(id: string): void;
+  pauseDownload(id: string): void;
+  resumeDownload(id: string): void;
+  getDownloads(): DownloadProgress[];
+  onProgress(id: string, callback: FTPProgressCallback): void;
+}
