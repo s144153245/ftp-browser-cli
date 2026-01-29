@@ -18,6 +18,7 @@ export interface FileItem {
   date: string | null;
   target?: string; // symlink target
   permissions?: string; // Unix permissions string (e.g., "drwxr-xr-x")
+  path?: string; // parent directory path (set by search)
 }
 
 export type AppMode = 'browse' | 'search' | 'preview' | 'download' | 'help' | 'connecting';
@@ -197,6 +198,7 @@ export interface UISlice {
   isItemChecked: (index: number) => boolean;
   checkAll: (totalItems: number) => void;
   setItemsPerPage: (count: number) => void;
+  appendSearchResults: (items: FileItem[]) => void;
 }
 
 // Utility Types
@@ -233,7 +235,7 @@ export interface IFTPService {
   ): Promise<void>;
   getFileInfo(path: string): Promise<FileInfo>;
   preview(path: string, maxBytes?: number): Promise<string>;
-  search(path: string, pattern: string, maxDepth?: number): Promise<FileItem[]>;
+  search(path: string, pattern: string, maxDepth?: number, onMatch?: (item: FileItem) => void): Promise<FileItem[]>;
   on(
     event: FTPEventType,
     callback: FTPProgressCallback | FTPErrorCallback

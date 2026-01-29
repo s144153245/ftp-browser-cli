@@ -193,13 +193,19 @@ export function useKeyboard(opts: {
         if (checkedItems.size > 0) {
           const indices = Array.from(checkedItems).sort((a, b) => a - b);
           const items = indices.map((i) => displayItems[i]).filter(Boolean);
-          dl.downloadSelected(items, currentPath);
+          // Each search result carries its own path; use per-item path
+          for (const item of items) {
+            const base = item.path ?? currentPath;
+            if (item.type === 'FILE') dl.addFileDownload(item, base);
+            else if (item.type === 'DIR') dl.addDirectoryDownload(item, base, true);
+          }
           clearChecked();
         } else if (selectedItem) {
+          const remoteBase = selectedItem.path ?? currentPath;
           if (selectedItem.type === 'FILE') {
-            dl.addFileDownload(selectedItem, currentPath);
+            dl.addFileDownload(selectedItem, remoteBase);
           } else if (selectedItem.type === 'DIR') {
-            dl.addDirectoryDownload(selectedItem, currentPath, true);
+            dl.addDirectoryDownload(selectedItem, remoteBase, true);
           }
         }
         return;
@@ -280,8 +286,26 @@ export function useKeyboard(opts: {
       if (key.escape) {
         setMode('browse');
         setSearchQuery('');
+        return;
       }
-      return;
+      // Navigation within search results
+      if (key.upArrow || key.downArrow || key.pageUp || key.pageDown) {
+        handleBrowse(input, key);
+        return;
+      }
+      // Enter: navigate dir or toggle file selection
+      if (key.return) {
+        if (!selectedItem) return;
+        if (selectedItem.type === 'DIR' || selectedItem.type === 'LINK') {
+          setMode('browse');
+          setSearchQuery('');
+          nav.handleEnter(selectedItem);
+        } else if (selectedItem.type === 'FILE') {
+          toggleCheck(globalIndex);
+        }
+        return;
+      }
+      return; // all other keys -> TextInput
     }
     if (mode === 'connecting') return;
     if (mode === 'browse') {

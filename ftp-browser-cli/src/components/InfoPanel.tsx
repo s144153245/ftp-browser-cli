@@ -39,10 +39,11 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ item, currentPath }) => {
     );
   }
 
-  // Build full path
-  const fullPath = currentPath === '/'
+  // Build full path — use item.path (from search results) when available
+  const basePath = item.path ?? currentPath;
+  const fullPath = basePath === '/'
     ? `/${item.name}`
-    : `${currentPath}/${item.name}`;
+    : `${basePath}/${item.name}`;
 
   // Truncate path from the left if too long
   const displayPath = fullPath.length > innerWidth

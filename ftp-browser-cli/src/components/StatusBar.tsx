@@ -30,7 +30,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     mode === 'browse'
       ? '[Space]Sel [d]DL [p]Prev [?]Help'
       : mode === 'search'
-        ? '[Esc]Cancel'
+        ? '[Up/Dn]Nav [Enter]Select [Esc]Cancel'
         : mode === 'preview'
           ? '[Esc]Close'
           : mode === 'help'

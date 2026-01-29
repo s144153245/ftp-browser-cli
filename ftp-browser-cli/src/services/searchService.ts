@@ -13,7 +13,8 @@ export class SearchService {
     startPath: string,
     pattern: string,
     maxDepth?: number,
-    onProgress?: (currentPath: string) => void
+    onProgress?: (currentPath: string) => void,
+    onMatch?: (item: FileItem) => void
   ): Promise<FileItem[]> {
     this.cancelled = false;
     const limit = maxDepth ?? defaults.maxSearchDepth;
@@ -31,7 +32,11 @@ export class SearchService {
         for (const f of files) {
           if (this.cancelled) return;
           const full = cur === '/' ? `/${f.name}` : `${cur}/${f.name}`;
-          if (f.name.toLowerCase().includes(pat)) results.push(f);
+          if (f.name.toLowerCase().includes(pat)) {
+            const matched = { ...f, path: cur };
+            results.push(matched);
+            onMatch?.(matched);
+          }
           if (f.type === 'DIR') await recurse(full, depth + 1);
         }
       } catch {

@@ -73,6 +73,7 @@ export const FileListItem: React.FC<FileListItemProps> = ({
       <Box flexGrow={1}>
         <Text>
           {textColor(item.name)}
+          {item.path && ` ${colors.muted(`in ${item.path}`)}`}
           {symlinkTarget && ` ${colors.muted(symlinkTarget)}`}
           {sizeText && ` ${colors.muted(sizeText)}`}
         </Text>

@@ -307,7 +307,7 @@ export class FTPService extends EventEmitter implements IFTPService {
     }
   }
 
-  async search(path: string, pattern: string, maxDepth?: number): Promise<FileItem[]> {
+  async search(path: string, pattern: string, maxDepth?: number, onMatch?: (item: FileItem) => void): Promise<FileItem[]> {
     await this.ensureConnected();
     const depthLimit = maxDepth ?? defaults.maxSearchDepth;
     const results: FileItem[] = [];
@@ -319,7 +319,11 @@ export class FTPService extends EventEmitter implements IFTPService {
         const items = await this.list(cur);
         for (const file of items) {
           const full = cur === '/' ? `/${file.name}` : `${cur}/${file.name}`;
-          if (file.name.toLowerCase().includes(pat)) results.push(file);
+          if (file.name.toLowerCase().includes(pat)) {
+            const matched = { ...file, path: cur };
+            results.push(matched);
+            onMatch?.(matched);
+          }
           if (file.type === 'DIR') await recurse(full, depth + 1);
         }
       } catch {

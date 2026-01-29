@@ -133,4 +133,9 @@ export const useUIStore = create<UIStore>((set, get) => ({
   },
 
   setItemsPerPage: (count) => set({ itemsPerPage: count }),
+
+  appendSearchResults: (items) => {
+    const state = get();
+    set({ searchResults: [...state.searchResults, ...items] });
+  },
 }));

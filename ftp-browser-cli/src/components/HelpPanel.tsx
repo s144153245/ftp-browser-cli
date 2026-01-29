@@ -36,6 +36,12 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
     { key: '1-9', description: 'Quick move cursor to item N' },
     { key: 'Esc', description: 'Clear selection / Go back' },
     { key: 'q', description: 'Quit application' },
+    { key: '', description: '' },
+    { key: '', description: '── Search Mode ──' },
+    { key: '\u2191/\u2193', description: 'Navigate search results' },
+    { key: 'Enter', description: 'Enter dir / Select file' },
+    { key: 'PgUp/PgDn', description: 'Page through results' },
+    { key: 'Esc', description: 'Exit search' },
   ];
 
   return (
