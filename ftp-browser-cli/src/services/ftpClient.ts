@@ -431,7 +431,8 @@ export async function downloadWithSeparateClient(
 }
 
 /**
- * Download a directory recursively using separate clients per file.
+ * Download a directory recursively using separate clients.
+ * Creates a dedicated listing client so it never blocks the main browsing client.
  */
 export async function downloadDirectoryWithSeparateClient(
   service: FTPService,
@@ -439,13 +440,31 @@ export async function downloadDirectoryWithSeparateClient(
   localPath: string,
   onProgress?: FTPProgressCallback,
 ): Promise<void> {
+  const listClient = await service.createDownloadClient();
+  try {
+    await downloadDirRecursive(service, listClient, remotePath, localPath, onProgress);
+  } finally {
+    listClient.close();
+  }
+}
+
+async function downloadDirRecursive(
+  service: FTPService,
+  listClient: Client,
+  remotePath: string,
+  localPath: string,
+  onProgress?: FTPProgressCallback,
+): Promise<void> {
   await ensureDirectoryExists(localPath);
-  const files = await service.list(remotePath);
+  const raw = await listClient.list(remotePath);
+  const files = raw
+    .filter((f) => f.name !== '.' && f.name !== '..')
+    .map(toFileItem);
   for (const file of files) {
     const r = remotePath === '/' ? `/${file.name}` : `${remotePath}/${file.name}`;
     const l = join(localPath, file.name);
     if (file.type === 'DIR') {
-      await downloadDirectoryWithSeparateClient(service, r, l, onProgress);
+      await downloadDirRecursive(service, listClient, r, l, onProgress);
     } else if (file.type === 'FILE') {
       await downloadWithSeparateClient(service, r, l, onProgress);
     }
