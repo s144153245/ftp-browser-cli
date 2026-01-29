@@ -29,7 +29,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
     { key: '/', description: 'Search files' },
     { key: 'r', description: 'Refresh directory' },
     { key: '?/h', description: 'Show this help' },
-    { key: 'n/PgDn', description: 'Next page' },
+    { key: 'PgDn', description: 'Next page' },
     { key: 'PgUp', description: 'Previous page' },
     { key: 'g', description: 'First page' },
     { key: 'G', description: 'Last page' },
@@ -38,10 +38,14 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
     { key: 'q', description: 'Quit application' },
     { key: '', description: '' },
     { key: '', description: '── Search Mode ──' },
-    { key: '\u2191/\u2193', description: 'Navigate search results' },
+    { key: 'Tab', description: 'Toggle input / navigate' },
+    { key: '\u2191/\u2193', description: 'Navigate results (auto-switch)' },
+    { key: 'Space', description: 'Toggle selection (navigate mode)' },
+    { key: 'd', description: 'Download selected (navigate mode)' },
+    { key: 'a', description: 'Select all (navigate mode)' },
     { key: 'Enter', description: 'Enter dir / Select file' },
     { key: 'PgUp/PgDn', description: 'Page through results' },
-    { key: 'Esc', description: 'Exit search' },
+    { key: 'Esc', description: 'Clear selection / Exit search' },
   ];
 
   return (

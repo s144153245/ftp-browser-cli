@@ -116,7 +116,7 @@ export const keys = {
   escape: 'escape',
 
   // Pagination
-  nextPage: ['n', 'pagedown'],
+  nextPage: ['pagedown'],
   prevPage: ['pageup'],
   firstPage: 'g',
   lastPage: 'G',
@@ -221,10 +221,10 @@ export const patterns = {
 // Version Information
 export const version = {
   major: 1,
-  minor: 4,
+  minor: 5,
   patch: 0,
   name: 'FTP_Browser-CLI',
-  full: '1.4.0',
+  full: '1.5.0',
 } as const;
 
 /**

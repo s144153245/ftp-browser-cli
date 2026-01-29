@@ -13,10 +13,11 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   onSearch,
   onCancel,
   isSearching = false,
+  inputFocused,
 }) => {
   useInput((input, key) => {
     if (!isActive) return;
-    
+
     if (key.escape) {
       onCancel();
     }
@@ -36,7 +37,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           value={query}
           onChange={onSearch}
           onSubmit={() => onSearch(query)}
+          focus={inputFocused ?? true}
         />
+        {inputFocused === false && <Text>{colors.muted(' [Tab]Edit')}</Text>}
       </Box>
       {isSearching && (
         <Box>

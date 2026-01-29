@@ -130,6 +130,7 @@ export interface SearchBoxProps {
   onSearch: (query: string) => void;
   onCancel: () => void;
   isSearching?: boolean;
+  inputFocused?: boolean;
 }
 
 export interface PreviewProps {
@@ -199,6 +200,8 @@ export interface UISlice {
   checkAll: (totalItems: number) => void;
   setItemsPerPage: (count: number) => void;
   appendSearchResults: (items: FileItem[]) => void;
+  searchInputFocused: boolean;
+  setSearchInputFocused: (focused: boolean) => void;
 }
 
 // Utility Types

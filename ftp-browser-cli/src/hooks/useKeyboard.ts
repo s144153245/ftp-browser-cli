@@ -13,13 +13,19 @@
  *   /            Start search
  *   r            Refresh directory
  *   ?/h          Show help
- *   n/PageDown   Next page
+ *   PageDown     Next page
  *   PageUp       Previous page
  *   g            First page
  *   G            Last page
  *   1-9          Quick move cursor to item N on current page
  *   Esc          Clear selection -> go back -> no-op at root
  *   q            Quit app
+ *
+ * Search mode:
+ *   Tab          Toggle between input and result navigation
+ *   Esc          Clear selection -> exit search
+ *   (input mode) Arrow keys auto-switch to navigate mode
+ *   (navigate)   Space/d/a/Enter/arrows work like browse mode
  */
 
 import { useInput } from 'ink';
@@ -51,6 +57,8 @@ export function useKeyboard(opts: {
   const clearChecked = useUIStore((s) => s.clearChecked);
   const checkedItems = useUIStore((s) => s.checkedItems);
   const checkAll = useUIStore((s) => s.checkAll);
+  const searchInputFocused = useUIStore((s) => s.searchInputFocused);
+  const setSearchInputFocused = useUIStore((s) => s.setSearchInputFocused);
 
   const files = useFTPStore((s) => s.files);
   const loading = useFTPStore((s) => s.loading);
@@ -152,7 +160,7 @@ export function useKeyboard(opts: {
       }
 
       // Next page
-      if (input === 'n' || key.pageDown) {
+      if (key.pageDown) {
         nextPage(displayItems.length);
         return;
       }
@@ -283,17 +291,45 @@ export function useKeyboard(opts: {
       return;
     }
     if (mode === 'search') {
+      // Escape: clear checked -> exit search
       if (key.escape) {
-        setMode('browse');
-        setSearchQuery('');
+        if (checkedItems.size > 0) {
+          clearChecked();
+        } else {
+          setMode('browse');
+          setSearchQuery('');
+        }
         return;
       }
-      // Navigation within search results
-      if (key.upArrow || key.downArrow || key.pageUp || key.pageDown) {
+      // Tab: toggle input focus
+      if (key.tab) {
+        setSearchInputFocused(!searchInputFocused);
+        return;
+      }
+      // Navigate mode (TextInput deactivated)
+      if (!searchInputFocused) {
+        // Block keys that conflict with search
+        if (input === '/' || input === 'r') return;
+        if (key.return) {
+          if (!selectedItem) return;
+          if (selectedItem.type === 'DIR' || selectedItem.type === 'LINK') {
+            setMode('browse');
+            setSearchQuery('');
+            nav.handleEnter(selectedItem);
+          } else if (selectedItem.type === 'FILE') {
+            toggleCheck(globalIndex);
+          }
+          return;
+        }
         handleBrowse(input, key);
         return;
       }
-      // Enter: navigate dir or toggle file selection
+      // Input mode (TextInput active) — arrow keys auto-switch to navigate
+      if (key.upArrow || key.downArrow || key.pageUp || key.pageDown) {
+        setSearchInputFocused(false);
+        handleBrowse(input, key);
+        return;
+      }
       if (key.return) {
         if (!selectedItem) return;
         if (selectedItem.type === 'DIR' || selectedItem.type === 'LINK') {
@@ -305,7 +341,7 @@ export function useKeyboard(opts: {
         }
         return;
       }
-      return; // all other keys -> TextInput
+      return; // TextInput captures remaining keys
     }
     if (mode === 'connecting') return;
     if (mode === 'browse') {

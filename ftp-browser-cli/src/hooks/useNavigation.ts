@@ -28,24 +28,48 @@ export function useNavigation() {
     [navigate, resetSelection, setError]
   );
 
+  const tryNavigateTo = useCallback(
+    async (path: string): Promise<boolean> => {
+      try {
+        resetSelection();
+        await navigate(path);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [navigate, resetSelection]
+  );
+
   const handleEnter = useCallback(
     async (item: FileItem) => {
+      const basePath = item.path ?? currentPath;
+
       if (item.type === 'DIR') {
-        const next = currentPath === '/' ? `/${item.name}` : joinPath(currentPath, item.name);
+        const next = basePath === '/' ? `/${item.name}` : joinPath(basePath, item.name);
         await navigateTo(next);
         return;
       }
       if (item.type === 'LINK') {
         const target = item.target ?? item.name;
-        const next = target.startsWith('/') ? target : joinPath(currentPath, target);
-        await navigateTo(next);
+        const next = target.startsWith('/') ? target : joinPath(basePath, target);
+        if (await tryNavigateTo(next)) return;
+        // Retry: strip leading path components progressively
+        if (target.startsWith('/')) {
+          const parts = target.split('/').filter(Boolean);
+          for (let i = 1; i < parts.length; i++) {
+            const stripped = '/' + parts.slice(i).join('/');
+            if (await tryNavigateTo(stripped)) return;
+          }
+        }
+        setError?.(`Cannot access link target: ${target}`);
         return;
       }
       if (item.type === 'FILE') {
         setMode('browse');
       }
     },
-    [currentPath, navigateTo, setMode]
+    [currentPath, navigateTo, tryNavigateTo, setMode, setError]
   );
 
   const handleGoBack = useCallback(async () => {
@@ -57,5 +81,5 @@ export function useNavigation() {
     }
   }, [goBack, resetSelection, setError]);
 
-  return { handleEnter, handleGoBack, navigateTo };
+  return { handleEnter, handleGoBack, navigateTo, tryNavigateTo };
 }

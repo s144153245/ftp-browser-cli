@@ -38,6 +38,7 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
   const setSelectedIndex = useUIStore((s) => s.setSelectedIndex);
   const removeDownload = useUIStore((s) => s.removeDownload);
   const clearChecked = useUIStore((s) => s.clearChecked);
+  const searchInputFocused = useUIStore((s) => s.searchInputFocused);
 
   const files = useFTPStore((s) => s.files);
   const currentPath = useFTPStore((s) => s.currentPath);
@@ -109,7 +110,8 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
   const handlePreview = useCallback(
     async (item: FileItem) => {
       if (item.type !== 'FILE') return;
-      const remote = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`;
+      const basePath = item.path ?? currentPath;
+      const remote = basePath === '/' ? `/${item.name}` : `${basePath}/${item.name}`;
       const ftp = getFtpService();
       if (!ftp) return;
       try {
@@ -197,6 +199,7 @@ export const App: React.FC<AppProps> = ({ config, downloadDir }) => {
             onSearch={onSearchQuery}
             onCancel={onSearchCancel}
             isSearching={isSearching}
+            inputFocused={searchInputFocused}
           />
           {searchResults.length > 0 && (
             <FileList

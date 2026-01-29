@@ -4,6 +4,7 @@ import type { StatusBarProps } from '../types/index.js';
 import { borders, colors, getTerminalWidth } from '../utils/constants.js';
 import { useUIStore } from '../store/uiSlice.js';
 
+
 /**
  * StatusBar component displaying pagination info and keyboard shortcuts.
  */
@@ -14,6 +15,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   mode,
 }) => {
   const checkedItems = useUIStore((s) => s.checkedItems);
+  const searchInputFocused = useUIStore((s) => s.searchInputFocused);
   const checkedCount = checkedItems.size;
 
   const width = getTerminalWidth();
@@ -30,7 +32,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     mode === 'browse'
       ? '[Space]Sel [d]DL [p]Prev [?]Help'
       : mode === 'search'
-        ? '[Up/Dn]Nav [Enter]Select [Esc]Cancel'
+        ? searchInputFocused
+          ? '[↑↓]Nav [Enter]Select [Esc]Cancel'
+          : '[Tab]Edit [Space]Sel [d]DL [Esc]Exit'
         : mode === 'preview'
           ? '[Esc]Close'
           : mode === 'help'

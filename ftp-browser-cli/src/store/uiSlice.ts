@@ -29,10 +29,12 @@ export const useUIStore = create<UIStore>((set, get) => ({
   isSearching: false,
   downloads: [],
   checkedItems: new Set<number>(),
+  searchInputFocused: true,
 
   setMode: (mode) => {
     set({ mode });
-    if (mode !== 'browse') set({ selectedIndex: 0, currentPage: 0 });
+    if (mode === 'search') set({ selectedIndex: 0, currentPage: 0, searchInputFocused: true });
+    else if (mode !== 'browse') set({ selectedIndex: 0, currentPage: 0 });
   },
 
   setSelectedIndex: (index) => set({ selectedIndex: Math.max(0, index) }),
@@ -131,6 +133,8 @@ export const useUIStore = create<UIStore>((set, get) => ({
     const last = Math.max(0, totalPages - 1);
     set({ currentPage: last, selectedIndex: 0 });
   },
+
+  setSearchInputFocused: (focused) => set({ searchInputFocused: focused }),
 
   setItemsPerPage: (count) => set({ itemsPerPage: count }),
 
